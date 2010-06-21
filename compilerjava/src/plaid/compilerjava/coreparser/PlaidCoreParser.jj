@@ -395,9 +395,10 @@ PermType PermType() :
   	PermType permType = null;	Type type = null;
 	Permission perm = null;
 }
-{	<DYN>
+{	(	<DYN>
 	{
 	  	return PermType.DYN;	}
+	// TODO: Should unit be a permission/type combo?
 | 	<UNIT>
 	{
 	  	return PermType.UNIT;	}
@@ -405,6 +406,7 @@ PermType PermType() :
 | 	perm = Permission() type = StructuralType()
 	{		return new PermType(perm, type);
 	}
+	)
 }
 
 Permission Permission() :
@@ -430,13 +432,15 @@ Type StructuralType() :
 	List<TypeDecl> typeDecls;
 }
 {
+	(
   	// type abbreviation	typeAbbrevTok = <ID> [<WITH> right = StructuralType()]
 	{		return (new Type(new ID(typeAbbrevTok.image))).compose(right);
 	}
 	// type declarations
-	typeDecls = TypeDecls() [<WITH> right = StructuralType()]
+|	typeDecls = TypeDecls() [<WITH> right = StructuralType()]
 	{
 	  	return (new Type(typeDecls)).compose(right);	}
+	)
 }
 
 List<TypeDecl> TypeDecls() :{	List<TypeDecl> decls = new ArrayList<TypeDecl>();
@@ -466,6 +470,16 @@ MethodTypeDecl MethodTypeDecl() :
 	  	  	argPermTypeList.add(arg.getPermType());	  	}
 	  	if (argPermTypeList.size() == 0) {			argPermTypeList.add(PermType.UNIT);
 	  	}
+
+	  	if (recvState1 == null && recvState2 == null) {
+			recvState1 = PermType.RECEIVER;
+			recvState2 = PermType.RECEIVER;
+		}
+
+		if (retPermType == null) {
+		  	retPermType = PermType.DYN;
+		}
+			
 	  	return new MethodTypeDecl(retPermType, argPermTypeList, recvState1, recvState2);	}
 }
 
@@ -557,6 +571,9 @@ Decl DeclField() :
 		]
 		(LOOKAHEAD(PermType() <ID>) permType = PermType() idToken = <ID> | idToken = <ID>)
 		{
+		  	// TODO: Add inference (probably not here, but maybe add an indicator that inference should be done later)
+		  	if (permType == null) {
+		  	  	permType = PermType.DYN;		  	}
 			name = new ID(idToken, idToken.image);
 		}
 		(
@@ -595,7 +612,7 @@ Decl DeclMethod() :
 {
 		t = <METHOD> 
 		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator()) 
-		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] (e = BlockExpression(false) | <SEMICOLON> )
+		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] e = BlockExpression(false)
 		{	
 			// separate the args from their types
 			for (Arg arg : argTypeList) {
@@ -605,6 +622,13 @@ Decl DeclMethod() :
 
 			if (argPermTypeList.size() == 0) {				argPermTypeList.add(PermType.UNIT);
 			}
+
+			if (recvState1 == null && recvState2 == null) {				recvState1 = PermType.RECEIVER;
+				recvState2 = PermType.RECEIVER;
+			}
+
+			if (retPermType == null) {
+			  	retPermType = PermType.DYN;			}
 
 			MethodTypeDecl methodType = new MethodTypeDecl(retPermType, argPermTypeList, recvState1, recvState2);
 			
@@ -660,9 +684,11 @@ Arg Arg() :
 	Token argToken = null;
 }
 {
-  	// TODO: Make this PermType
   	(LOOKAHEAD(PermType() <ID>) permType = PermType() argToken = <ID> | argToken = <ID>) 
 	{
+	  	// TODO: Should dyn be the default?
+	  	if (permType == null) {			permType = PermType.DYN;
+	  	}
 		return new Arg(permType, new ID(argToken, argToken.image));
 	}
 }
@@ -746,8 +772,9 @@ Expression BlockExpression(boolean isExp) :
 		<LBRACE> [ e = StmtListSemi() ] <RBRACE>
 		{
 				if (isExp) {					List<PermType> permTypes = new ArrayList<PermType>();
-					permTypes.add(PermType.UNIT);  
-					return new Lambda(e.getToken(), IdGen.getId(), e, new MethodTypeDecl(null, permTypes, null, null));
+					permTypes.add(PermType.UNIT);
+					// TODO: Use something other than RECEIVER to indicate a default/place we need to do inference
+					return new Lambda(e.getToken(), IdGen.getId(), e, new MethodTypeDecl(PermType.RECEIVER, permTypes, PermType.RECEIVER, PermType.RECEIVER));
 				}
 				else
 					return e;
@@ -760,6 +787,7 @@ Expression StmtListSemi() :
 		Expression e;
 }
 {
+		
 		e = Stmt() { expList.add(e); }
 		(LOOKAHEAD(2)	< SEMICOLON > e = Stmt() { expList.add(e); }
 				
@@ -1336,7 +1364,7 @@ Expression ExpList() :
 						With pairWith;
 						for (int i = size - 1; i >= 0; i--)
 						{
-								fst = new FieldDecl(expList.get(i).getToken(), new ID("fst"), expList.get(i), false, true, new FieldTypeDecl(null));
+								fst = new FieldDecl(expList.get(i).getToken(), new ID("fst"), expList.get(i), false, true, new FieldTypeDecl(PermType.RECEIVER));
 								snd = new FieldDecl(new ID("snd"), second);  //TODO : token for something not in source?
 								pairFields = new ArrayList < Decl > ();
 								pairFields.add(fst);
@@ -1483,7 +1511,8 @@ Expression Function() :
 			  var = IdGen.getId();
 			  permTypeList.add(PermType.UNIT);			}
 
-			MethodTypeDecl methodType = new MethodTypeDecl(null, permTypeList, null, null);
+			// TODO: Use something other than RECEIVER to indicate that we need to do inference
+			MethodTypeDecl methodType = new MethodTypeDecl(PermType.RECEIVER, permTypeList, PermType.RECEIVER, PermType.RECEIVER);
 			
 			// TODO: where should the return type annotation go?
 			return new Lambda(t, var, body, methodType);
