@@ -251,6 +251,12 @@ TOKEN /*[IGNORE_CASE]*/:
 | 	< UNIT : "unit" >
 | 	< FULL : "full" >
 | 	< PURE : "pure" >
+| 	< SHARED : "shared" >
+
+/* AEminium specific keywords */
+| 	< GROUP : "group" >
+| 	< SHARE : "share" >
+|	< ATOMIC : "atomic" >
 }
 
 /* Literals */
@@ -410,6 +416,12 @@ Permission Permission() :
 	  	return Permission.IMMUTABLE;	}
 | 	<PURE>	{
 	  	return Permission.PURE;	}
+| 	<UNIQUE>
+	{		return Permission.UNIQUE;
+	}
+| 	<SHARED>
+	{		return Permission.SHARED;
+	}
 }
 
 Type StructuralType() :
@@ -748,12 +760,23 @@ Expression StmtListSemi() :
 		Expression e;
 }
 {
-		
 		e = Stmt() { expList.add(e); }
 		(LOOKAHEAD(2)	< SEMICOLON > e = Stmt() { expList.add(e); }
 				
 		)*
 		[<SEMICOLON>]
+		{
+				return foldExpListSemi(expList);
+		}
+}
+
+Expression StmtListSemiNotOptional() :
+{
+		ArrayList < Expression > expList = new ArrayList < Expression > ();
+		Expression e;
+}
+{
+		(e = Stmt() < SEMICOLON > { expList.add(e); })+
 		{
 				return foldExpListSemi(expList);
 		}
@@ -795,6 +818,61 @@ Expression Exp() :
 		{
 				return e;
 		}
+|		e = GroupOperation()		{				return e;
+		}
+}
+
+Expression GroupOperation() :
+{
+	Expression e;}
+{
+	e = ShareBlock()
+	{		return e;
+	}
+|	e = AtomicBlock()
+	{		return e;
+	}}
+
+Expression ShareBlock() :{
+	Token t, gt;
+	ID group;
+	Expression stmtList1, stmtList2; }
+{
+	t = < SHARE > < LPAREN > gt = < ID > { group = new ID(gt, gt.image); } < RPAREN >
+	< LBRACE >
+		stmtList1 = StmtListSemiNotOptional()
+		< OR >
+		stmtList2 = StmtListSemiNotOptional()
+	< RBRACE >
+	{
+		return new Share(t, group, stmtList1, stmtList2);
+	}}
+
+Expression AtomicBlock() :
+{
+	Token t, gt;
+	List<ID> groupList = new ArrayList<ID>();
+	Expression stmtList; 
+}
+{
+	t = < ATOMIC > < LPAREN >
+	[
+		(gt = < ID >)
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+		(< COMMA > gt = < ID >)*
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+	]
+	< RPAREN >
+	< LBRACE >
+		stmtList = StmtListSemi()
+	< RBRACE >
+	{
+		return new Atomic(t, groupList, stmtList);
+	} 
 }
 
 Expression InfixExp() :

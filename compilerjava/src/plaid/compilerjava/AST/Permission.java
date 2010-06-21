@@ -7,6 +7,8 @@ public class Permission implements ASTnode {
 	public static final Permission FULL = new Permission(null, "full");
 	public static final Permission IMMUTABLE = new Permission(null, "immutable");
 	public static final Permission PURE = new Permission(null, "pure");
+	public static final Permission UNIQUE = new Permission(null, "unique");
+	public static final Permission SHARED = new Permission(null, "shared");
 
 	private final Token token;
 	private final String image;

@@ -1,0 +1,13 @@
+package coreExamples.aeminiumSyntax;
+
+method main() {
+	share (g) {
+			foo();
+		||	bar();
+	};
+	
+	atomic (g1, g2, g3) {
+		foo();
+		bar();
+	};
+}
