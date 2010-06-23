@@ -386,9 +386,9 @@ List < Token > Package() :
 		}
 }
 
-/*****************************************************************************/
-/*								TYPING RULES	 							 */
-/*****************************************************************************/
+//
+// TYPING RULES
+//
 
 PermType PermType() :
 {
@@ -411,6 +411,7 @@ PermType PermType() :
 
 Permission Permission() :
 {	Permission perm;
+	Token t;
 }
 {	<FULL>	{
 	  	return Permission.FULL;	}
@@ -421,8 +422,9 @@ Permission Permission() :
 | 	<UNIQUE>
 	{		return Permission.UNIQUE;
 	}
-| 	<SHARED>
-	{		return Permission.SHARED;
+| 	<SHARED> [ <COLON> t = <ID> ]
+	{
+		// TODO: Link permission to data group		return Permission.SHARED;
 	}
 }
 
@@ -492,9 +494,9 @@ FieldTypeDecl FieldTypeDecl() :{
   	{
   	  	return new FieldTypeDecl(fieldPermType);  	}}
 
-/*****************************************************************************/
-/*							END OF TYPING RULES								 */
-/*****************************************************************************/
+//
+// END OF TYPING RULES
+//
 
 ImportList Imports() :
 {
@@ -597,6 +599,7 @@ Decl DeclMethod() :
 {
 		Token t;
 		Token typeToken = null;
+		Token groupToken = null;
 		PermType recvState1 = null;
 		PermType recvState2 = null;
 		ID name;
@@ -608,10 +611,16 @@ Decl DeclMethod() :
 		List<ID> argList = new ArrayList<ID>();
 		MethodDecl d;
 		PermType retPermType = null;
+		List<ID> groupList = new ArrayList<ID>();
 }
 {
 		t = <METHOD> 
-		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator()) 
+		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator())
+/*		[
+			<LT>
+				<GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				(					<COMMA> <GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				)*
+			<GT>
+		]*/
 		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] e = BlockExpression(false)
 		{	
 			// separate the args from their types
@@ -823,9 +832,71 @@ Expression Stmt() :
 		{
 				return e;
 		} //var/val required for local variable declaration
+|		e = GroupOperation()
+		{
+				return e;
+		}
 }
 
+Expression GroupOperation() :
+{
+	Expression e;
+}
+{
+	e = ShareBlock()
+	{
+		return e;
+	}
+|	e = AtomicBlock()
+	{
+		return e;
+	}
+}
 
+Expression ShareBlock() :
+{
+	Token t, gt;
+	ID group;
+	Expression stmtList1, stmtList2; 
+}
+{
+	t = < SHARE > < LPAREN > gt = < ID > { group = new ID(gt, gt.image); } < RPAREN >
+	< LBRACE >
+		stmtList1 = StmtListSemiNotOptional()
+		< OR >
+		stmtList2 = StmtListSemiNotOptional()
+	< RBRACE >
+	{
+		return new Share(t, group, stmtList1, stmtList2);
+	}
+}
+
+Expression AtomicBlock() :
+{
+	Token t, gt;
+	List<ID> groupList = new ArrayList<ID>();
+	Expression stmtList; 
+}
+{
+	t = < ATOMIC > < LPAREN >
+	(
+		(gt = < ID >)
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+		(< COMMA > gt = < ID >)*
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+	)
+	< RPAREN >
+	< LBRACE >
+		stmtList = StmtListSemi()
+	< RBRACE >
+	{
+		return new Atomic(t, groupList, stmtList);
+	} 
+}
 
 Expression Exp() :
 {
@@ -846,61 +917,6 @@ Expression Exp() :
 		{
 				return e;
 		}
-|		e = GroupOperation()		{				return e;
-		}
-}
-
-Expression GroupOperation() :
-{
-	Expression e;}
-{
-	e = ShareBlock()
-	{		return e;
-	}
-|	e = AtomicBlock()
-	{		return e;
-	}}
-
-Expression ShareBlock() :{
-	Token t, gt;
-	ID group;
-	Expression stmtList1, stmtList2; }
-{
-	t = < SHARE > < LPAREN > gt = < ID > { group = new ID(gt, gt.image); } < RPAREN >
-	< LBRACE >
-		stmtList1 = StmtListSemiNotOptional()
-		< OR >
-		stmtList2 = StmtListSemiNotOptional()
-	< RBRACE >
-	{
-		return new Share(t, group, stmtList1, stmtList2);
-	}}
-
-Expression AtomicBlock() :
-{
-	Token t, gt;
-	List<ID> groupList = new ArrayList<ID>();
-	Expression stmtList; 
-}
-{
-	t = < ATOMIC > < LPAREN >
-	[
-		(gt = < ID >)
-		{
-			groupList.add(new ID(gt, gt.image));
-		}
-		(< COMMA > gt = < ID >)*
-		{
-			groupList.add(new ID(gt, gt.image));
-		}
-	]
-	< RPAREN >
-	< LBRACE >
-		stmtList = StmtListSemi()
-	< RBRACE >
-	{
-		return new Atomic(t, groupList, stmtList);
-	} 
 }
 
 Expression InfixExp() :
@@ -1411,37 +1427,28 @@ Expression ExpSuffix(Expression prefix) :
 ID Operator() :
 {
 		Token start;
-		String suffix = "";
 }
 {
-		(
-				(
-						start = "=" suffix = OpSuffix()
-				)
-		|
-				(
-						(
-								start = "+"
-						|		start = "-"
-						|		start = "*"
-						|		start = "/"
-						|		start = "%"
-						|		start = "<"
-						|		start = ">"
-						|		start = "!"
-						|		start = "~"
-						|		start = "?"
-						|		start = ":"
-						|		start = "&"
-						|		start = "|"
-						|		start = "^"
-						)
-						[ suffix = OpSuffix() ]
-				)
-		)
-		{
-				return new ID(start, start.image+ suffix);
-		}
+	(
+			start = "="
+		|	start = "+"
+		|	start = "-"
+		|	start = "*"
+		|	start = "/"
+		|	start = "%"
+		|	start = "<"
+		|	start = ">"
+		|	start = "!"
+		|	start = "~"
+		|	start = "?"
+		|	start = ":"
+		|	start = "&"
+		|	start = "|"
+		|	start = "^"
+	)
+	{
+		return new ID(start, start.image);
+	}
 }
 
 String OpSuffix() :
