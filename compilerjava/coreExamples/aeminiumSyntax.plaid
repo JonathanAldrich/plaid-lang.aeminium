@@ -10,7 +10,11 @@ method shared:G Type foo<group G, group H>(immutable S x, shared:G T y) [unique 
 method shared:G Type <<< <group G, group H>(immutable S x, shared:G T y) [unique U >> unique V] {
 }
 
-
+state S {
+	method unique Int + <group G>(immutable Int x, immutable Int y) [unique S >> unique S] {
+		x + y
+	}
+}
 
 method main() {
 	share (G) {

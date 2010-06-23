@@ -617,11 +617,11 @@ Decl DeclMethod() :
 {
 		t = <METHOD> 
 		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator())
-/*		[
+		[
 			<LT>
 				<GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				(					<COMMA> <GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				)*
 			<GT>
-		]*/
+		]
 		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] e = BlockExpression(false)
 		{	
 			// separate the args from their types
