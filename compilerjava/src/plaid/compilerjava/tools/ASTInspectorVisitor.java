@@ -7,6 +7,7 @@ import javax.swing.tree.*;
 import plaid.compilerjava.AST.ASTnode;
 import plaid.compilerjava.AST.Application;
 import plaid.compilerjava.AST.Assignment;
+import plaid.compilerjava.AST.Atomic;
 import plaid.compilerjava.AST.Case;
 import plaid.compilerjava.AST.ChangeState;
 import plaid.compilerjava.AST.CompilationUnit;
@@ -16,6 +17,7 @@ import plaid.compilerjava.AST.Dereference;
 import plaid.compilerjava.AST.Expression;
 import plaid.compilerjava.AST.FieldDecl;
 import plaid.compilerjava.AST.FieldTypeDecl;
+import plaid.compilerjava.AST.GroupDecl;
 import plaid.compilerjava.AST.ID;
 import plaid.compilerjava.AST.ImportList;
 import plaid.compilerjava.AST.IntLiteral;
@@ -23,10 +25,12 @@ import plaid.compilerjava.AST.Lambda;
 import plaid.compilerjava.AST.LetBinding;
 import plaid.compilerjava.AST.Match;
 import plaid.compilerjava.AST.MethodDecl;
+import plaid.compilerjava.AST.NewGroup;
 import plaid.compilerjava.AST.NewInstance;
 import plaid.compilerjava.AST.PermType;
 import plaid.compilerjava.AST.Permission;
 import plaid.compilerjava.AST.QI;
+import plaid.compilerjava.AST.Share;
 import plaid.compilerjava.AST.State;
 import plaid.compilerjava.AST.StateDecl;
 import plaid.compilerjava.AST.StringLiteral;
@@ -380,6 +384,46 @@ public class ASTInspectorVisitor extends AbstractASTVisitor {
 		addNodeVisitChildren(node, new DefaultMutableTreeNode("ASTnode"));
 	    // leave
 	    return this.leave(node, node, visitor);
+	}
+	
+	//
+	// Aeminium specific nodes
+	//
+	
+	@Override
+	public ASTnode visitNode(Atomic node) {
+		ASTVisitor visitor = this.enter(node);
+		// create the new tree node and add it to the tree
+		addNodeVisitChildren(node, new DefaultMutableTreeNode("AtomicBlock"));
+	    // leave
+	    return this.leave(node, node, visitor);		
+	}
+
+	@Override
+	public ASTnode visitNode(GroupDecl node) {
+		ASTVisitor visitor = this.enter(node);
+		// create the new tree node and add it to the tree
+		addNodeVisitChildren(node, new DefaultMutableTreeNode("GroupDeclaration"));
+		// leave
+		return this.leave(node, node, visitor);
+	}
+
+	@Override
+	public ASTnode visitNode(NewGroup node) {
+		ASTVisitor visitor = this.enter(node);
+		// create the new tree node and add it to the tree
+		addNodeVisitChildren(node, new DefaultMutableTreeNode("NewGroup"));
+		// leave
+		return this.leave(node, node, visitor);
+	}
+
+	@Override
+	public ASTnode visitNode(Share node) {
+		ASTVisitor visitor = this.enter(node);
+		// create the new tree node and add it to the tree
+		addNodeVisitChildren(node, new DefaultMutableTreeNode("ShareBlock"));
+		// leave
+		return this.leave(node, node, visitor);
 	}
 
 }
