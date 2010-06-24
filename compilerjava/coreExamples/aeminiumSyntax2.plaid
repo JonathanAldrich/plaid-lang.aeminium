@@ -1,0 +1,27 @@
+package coreExamples.test2;
+
+method foo<group G, group H>(x, y) {
+	java.lang.System.out.println(x + y);
+}
+
+state S {
+	group I;
+	
+	method bar<group G, group H>(x, y) {
+		java.lang.System.out.println(x + y);
+	}
+	
+	method baz<group G, group H>() {
+		new S
+	}
+}
+
+method main() {
+	new group G;
+	new group H;
+	
+	foo<G, H>(5, 6);
+	
+	var s = new S with { group I = G; };
+	s.baz<G, H>().bar<G, H>(5, 6);
+}
