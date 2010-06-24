@@ -23,5 +23,6 @@ method main() {
 	foo<G, H>(5, 6);
 	
 	var s = new S with { group I = G; };
+	
 	s.baz<G, H>().bar<G, H>(5, 6);
 }
