@@ -1,6 +1,6 @@
 package coreExamples.aeminiumSyntax;
 
-method bar/*<group G1>*/() {
+method bar<group G1>() {
 }
 
 method shared:G Type foo<group G, group H>(immutable S x, shared:G T y) [unique U >> unique V] {
@@ -11,13 +11,23 @@ method shared:G Type <<< <group G, group H>(immutable S x, shared:G T y) [unique
 }
 
 state S {
+	group G;
+	group H; // Should this be allowed?
+	
 	method unique Int + <group G>(immutable Int x, immutable Int y) [unique S >> unique S] {
 		x + y
 	}
 }
 
 method main() {
-	share (G) {
+//	foo<G, H>(1, 2);
+//	bar<G>();
+
+	new group G1;
+	
+	var s = new S with { group G = G1; };
+
+	share (G1) {
 			foo();
 		||	bar();
 	};
