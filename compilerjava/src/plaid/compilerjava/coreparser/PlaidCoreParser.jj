@@ -1333,7 +1333,38 @@ List<ID> IdList() :
 	{
 		return ids;
 	}
-}	
+}
+
+Expression IdentifierGroupParamsCallOptional(Expression obj) :
+{
+		Token t;
+		Expression e;
+		Expression arg = new UnitLiteral();
+		List<ID> params;
+		List < Expression > curriedArgs = new ArrayList< Expression >();}
+{
+	(		t = < ID >
+		{
+				if (obj == null)
+					e = new ID(t, t.image);
+				else
+					e = new Dereference(t, obj, new ID(t.image));					
+		}
+		[
+				LOOKAHEAD(< LT > IdList() < GT >)
+				(
+					< LT > params = IdList() < GT > < LPAREN > [ arg = ExpList() ] < RPAREN >
+					{
+							curriedArgs.add(arg);
+					}
+				)
+		]
+		{
+				e = foldCurriedArgs(e, curriedArgs);		}
+	)
+	{		return e;
+	}
+}
 
 Expression SimpleExp() :
 {
@@ -1342,7 +1373,6 @@ Expression SimpleExp() :
 		State s;
 		List < Token > dotName;
 		List < Expression > curriedArgs = new ArrayList < Expression > ();
-		List < ID > params = new ArrayList < ID > ();
 }
 {
 		e = BlockExpression(true)
@@ -1355,12 +1385,10 @@ Expression SimpleExp() :
 		}
 |
 		(
-				(t = < ID > | t = <THIS>)
-				{
-						e = new ID(t, t.image);
-				}
+				t = < THIS > { e = new ID(t, t.image); }
 		|		t = < LPAREN > e = ExpList() < RPAREN >
 		|		e = Literal()
+		|		e = IdentifierGroupParamsCallOptional(null)
 		)
 		(
 				arg = ArgExp()
@@ -1373,10 +1401,10 @@ Expression SimpleExp() :
 			curriedArgs = new ArrayList < Expression > ();		  
 		}
 		(
-				< DOT > (t = < ID > | t = < NEW >)
-				{
-					e = new Dereference(t, e, new ID(t.image));
-				}
+				< DOT >
+				(	t = < NEW > { e = new Dereference(t, e, new ID(t.image)); }
+				|	e = IdentifierGroupParamsCallOptional(e)
+				)
 				(
 					arg = ArgExp()
 					{						curriedArgs.add(arg);
@@ -1394,19 +1422,9 @@ Expression SimpleExp() :
 Expression ArgExp() :
 {
 		Expression e = new UnitLiteral();
-		List<ID> params = new ArrayList<ID>();
-		Token gt;
 }
 {
-/*
-		LOOKAHEAD(< LT > IdList() < GT >)
-		(
-				< LT > params = IdList() < GT >
-				< LPAREN > [ e = ExpList() ] < RPAREN >		)
-		{			return e;
-		}
-
-|*/		e = BlockExpression(true)
+		e = BlockExpression(true)
 		{
 				return e;
 		}
