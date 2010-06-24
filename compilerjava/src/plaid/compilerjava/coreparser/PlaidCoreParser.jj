@@ -536,7 +536,24 @@ Decl Decl() :
 		{
 				return d;
 		}
+|		d = DeclGroup()
+		{
+				return d;		}		
 }
+
+Decl DeclGroup() :
+{
+	Token dst;
+	Token src;}
+{
+		< GROUP > dst = < ID >
+		(				< EQUALS > src = < ID > < SEMICOLON > 
+				{
+						return new GroupDecl(dst, new ID(dst.image), new ID(src.image)); 				}
+		|		< SEMICOLON >
+				{						return new GroupDecl(dst, new ID(dst.image));
+				}
+		)}
 
 Decl DeclState() :
 {
@@ -826,6 +843,7 @@ Expression Stmt() :
 		Expression e;
 }
 {
+		LOOKAHEAD(2)
 		e = Exp()
 		{
 				return e;
@@ -845,14 +863,17 @@ Expression GroupOperation() :
 	Expression e;
 }
 {
-	e = ShareBlock()
-	{
-		return e;
-	}
-|	e = AtomicBlock()
-	{
-		return e;
-	}
+		e = ShareBlock()
+		{
+				return e;
+		}
+|		e = AtomicBlock()
+		{
+				return e;
+		}
+|		e = CreateGroup()
+		{				return e;
+		}
 }
 
 Expression ShareBlock() :
@@ -897,8 +918,17 @@ Expression AtomicBlock() :
 	< RBRACE >
 	{
 		return new Atomic(t, groupList, stmtList);
-	} 
+	}
 }
+
+Expression CreateGroup() :
+{
+		Token t;
+		Token groupName;}
+{
+		t = < NEW > < GROUP > groupName = < ID >
+		{
+				return new NewGroup(t, new ID(groupName, groupName.image));		}}
 
 Expression Exp() :
 {
@@ -1284,6 +1314,27 @@ ID IdOrOperator() :
 		}
 }
 
+List<ID> IdList() :
+{
+	List<ID> ids = new ArrayList<ID>();
+	Token t;
+}
+{
+	(
+		(t = < ID >)
+		{
+			ids.add(new ID(t, t.image));
+		}
+		(< COMMA > t = < ID >)*
+		{
+			ids.add(new ID(t, t.image));
+		}
+	)
+	{
+		return ids;
+	}
+}	
+
 Expression SimpleExp() :
 {
 		Token t;
@@ -1291,6 +1342,7 @@ Expression SimpleExp() :
 		State s;
 		List < Token > dotName;
 		List < Expression > curriedArgs = new ArrayList < Expression > ();
+		List < ID > params = new ArrayList < ID > ();
 }
 {
 		e = BlockExpression(true)
@@ -1342,15 +1394,25 @@ Expression SimpleExp() :
 Expression ArgExp() :
 {
 		Expression e = new UnitLiteral();
+		List<ID> params = new ArrayList<ID>();
+		Token gt;
 }
 {
-		e = BlockExpression(true)
+/*
+		LOOKAHEAD(< LT > IdList() < GT >)
+		(
+				< LT > params = IdList() < GT >
+				< LPAREN > [ e = ExpList() ] < RPAREN >		)
+		{			return e;
+		}
+
+|*/		e = BlockExpression(true)
 		{
 				return e;
 		}
 |		< LPAREN > [ e = ExpList() ] < RPAREN >
 		{
-				return e;
+			return e;
 		}
 }
 
