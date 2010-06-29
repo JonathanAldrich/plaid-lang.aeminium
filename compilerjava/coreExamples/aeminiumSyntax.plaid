@@ -12,7 +12,6 @@ method shared:G Type <<< <group G, group H>(immutable S x, shared:G T y) [unique
 
 state S {
 	group G;
-	group H; // Should this be allowed?
 	
 	method unique Int + <group G>(immutable Int x, immutable Int y) [unique S >> unique S] {
 		x + y
@@ -20,8 +19,8 @@ state S {
 }
 
 method main() {
-//	foo<G, H>(1, 2);
-//	bar<G>();
+	foo<G, H>(1, 2);
+	bar<G>();
 
 	new group G1;
 	
@@ -30,6 +29,7 @@ method main() {
 	share (G1) {
 			foo();
 		||	bar();
+		||	baz();
 	};
 	
 	atomic (G1, G2, G3) {

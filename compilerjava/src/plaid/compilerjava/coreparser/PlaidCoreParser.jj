@@ -710,9 +710,11 @@ Arg Arg() :
 {
 	PermType permType = null;
 	Token argToken = null;
+	List<ID> idList;
 }
 {
-  	(LOOKAHEAD(PermType() <ID>) permType = PermType() argToken = <ID> | argToken = <ID>) 
+	// TODO: Link idList to AST
+  	(LOOKAHEAD(PermType() [<LT> idList = IdList() <GT>] <ID>) permType = PermType() [<LT> idList = IdList() <GT>] argToken = <ID> | argToken = <ID>) 
 	{
 	  	// TODO: Should dyn be the default?
 	  	if (permType == null) {			permType = PermType.DYN;
@@ -880,17 +882,20 @@ Expression ShareBlock() :
 {
 	Token t, gt;
 	ID group;
-	Expression stmtList1, stmtList2; 
+	Expression stmtList;
+	List < Expression > stmtLists = new ArrayList < Expression > (); 
 }
 {
 	t = < SHARE > < LPAREN > gt = < ID > { group = new ID(gt, gt.image); } < RPAREN >
 	< LBRACE >
-		stmtList1 = StmtListSemiNotOptional()
-		< OR >
-		stmtList2 = StmtListSemiNotOptional()
+		stmtList = StmtListSemiNotOptional() { stmtLists.add(stmtList); }
+		(
+			< OR >
+			stmtList = StmtListSemiNotOptional() { stmtLists.add(stmtList); }
+		)*
 	< RBRACE >
 	{
-		return new Share(t, group, stmtList1, stmtList2);
+		return new Share(t, group, stmtLists);
 	}
 }
 
