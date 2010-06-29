@@ -72,12 +72,19 @@ public class DeclList implements State {
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
 		
 		Set<String> declNames = new HashSet<String>();
+		boolean haveGroup = false;
 		for (Decl decl : decls) {
+			if (decl instanceof GroupDecl) {
+				if (haveGroup)
+					throw new PlaidException("Objects can be associated with at most one data group at a time.");
+				else
+					haveGroup = true;
+			}
 			declNames.add(decl.getName());
 			decl.codegen(out,y,localVars);
 		}
 		if (declNames.size() < decls.size()) {
-			throw new PlaidException("Cannot have field and method with the same name.");
+			throw new PlaidException("Cannot have equally named fields, methods or groups.");
 		}
 	}
 

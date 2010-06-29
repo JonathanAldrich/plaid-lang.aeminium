@@ -1,5 +1,7 @@
 package plaid.compilerjava.AST;
 
+import java.util.List;
+
 import plaid.compilerjava.coreparser.Token;
 import plaid.compilerjava.tools.ASTVisitor;
 import plaid.compilerjava.util.CodeGen;
@@ -8,14 +10,12 @@ import plaid.compilerjava.util.IDList;
 public class Share implements Expression {
 	private Token token;
 	private ID group;
-	private Expression stmtList1;
-	private Expression stmtList2;
+	private List<Expression> stmtLists;
 	
-	public Share(Token token, ID group, Expression stmtList1, Expression stmtList2) {
+	public Share(Token token, ID group, List<Expression> stmtLists) {
 		this.token = token;
 		this.group = group;
-		this.stmtList1 = stmtList1;
-		this.stmtList2 = stmtList2;
+		this.stmtLists = stmtLists;
 	}
 	
 	@Override
@@ -36,7 +36,7 @@ public class Share implements Expression {
 	@Override
 	public void visitChildren(ASTVisitor visitor) {
 		group.accept(visitor);
-		stmtList1.accept(visitor);
-		stmtList2.accept(visitor);
+		for (Expression e : stmtLists)
+			e.accept(visitor);
 	}
 }
