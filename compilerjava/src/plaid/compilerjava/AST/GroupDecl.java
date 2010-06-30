@@ -1,6 +1,7 @@
 package plaid.compilerjava.AST;
 
 import java.io.File;
+import java.util.Set;
 
 import plaid.compilerjava.CompilerConfiguration;
 import plaid.compilerjava.coreparser.Token;
@@ -30,7 +31,12 @@ public class GroupDecl implements Decl {
 	}
 
 	@Override
-	public File codegen(QualifiedID qid, ImportList imports, CompilerConfiguration cc) {
+	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public File codegen(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -38,7 +44,6 @@ public class GroupDecl implements Decl {
 	@Override
 	public void codegen(CodeGen out, ID y, IDList localVars) {
 		// TODO Auto-generated method stub
-
 	}
 
 	@Override
