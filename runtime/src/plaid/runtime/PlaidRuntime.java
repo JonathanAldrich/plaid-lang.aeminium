@@ -324,7 +324,7 @@ public abstract class PlaidRuntime implements PlaidRuntimeState, PlaidRuntimeCon
 	private static aeminiumruntime.Runtime aemRuntime = null; 
 	public static aeminiumruntime.Runtime getAeminium() {
 		if (aemRuntime == null) {
-			aemRuntime = new aeminiumruntime.simpleparallel.ParallelRuntime();
+			aemRuntime = aeminiumruntime.launcher.RuntimeFactory.getDebugRuntime();
 		}
 		return aemRuntime;
 	}
