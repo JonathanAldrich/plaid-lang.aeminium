@@ -179,7 +179,6 @@ public class CodeGen {
 		
 		assign(target);
 		changeState(object,newState);
-		append(";");
 		updateVar(target);
 	}
 
@@ -224,7 +223,6 @@ public class CodeGen {
 		output.append(classLoader + ".protoMethod(\"" + target + name + "\", new " + delegateType + " () {" +
 			"public " + plaidObjectType + " invoke(final " + plaidObjectType + " " + thisVar + ", final " + plaidObjectType + " " + name + ") {" +
 				"final " + plaidScopeType + " " + CodeGen.localScope + " = " + classLoader + ".localScope(" + CodeGen.globalScope + ");" +
-				CodeGen.localScope + ".insertAllMembers(" + CodeGen.thisVar + ");" + 
 				"local$c0pe.insert(\"" + name + "\", " + name + ", false" + ");" + 
 				"local$c0pe.insert(\"" + CodeGen.thisVar +"\", " + CodeGen.thisVar + ", true" + ");");
 	}

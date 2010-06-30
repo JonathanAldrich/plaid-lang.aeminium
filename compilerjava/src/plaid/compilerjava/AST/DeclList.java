@@ -64,13 +64,31 @@ public class DeclList implements State {
 		return token;
 	}
 	
+//	// for top-level declarations
+//	@Override
+//	public void codegen(CodeGen out, ID y, IDList localVars) {
+//	
+//		out.setLocation(token);
+//		
+//		out.assignToNewStateObject(y.getName());  //y = util.newObject();
+//		
+//		Set<String> declNames = new HashSet<String>();
+//		for (Decl decl : decls) {
+//			declNames.add(decl.getName());
+//			decl.codegen(out, y, localVars);
+//		}
+//		if (declNames.size() < decls.size()) {
+//			throw new PlaidException("Cannot have field and method with the same name.");
+//		}
+//	}
+
+	// for state declarations
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars) {
-	
+	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+		
 		out.setLocation(token);
 		
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
-		
 		Set<String> declNames = new HashSet<String>();
 		boolean haveOwnerGroup = false;
 		for (Decl decl : decls) {
@@ -81,7 +99,12 @@ public class DeclList implements State {
 					haveOwnerGroup = true;
 			}
 			declNames.add(decl.getName());
-			decl.codegen(out,y,localVars);
+			System.out.println("Adding to state vars: " + decl.getName());
+			stateVars.add(new ID(decl.getName()));
+		}
+		
+		for (Decl decl : decls) {
+			decl.codegen(out, y, localVars, stateVars);
 		}
 		if (declNames.size() < decls.size()) {
 			throw new PlaidException("Cannot have equally named fields, methods or groups.");
