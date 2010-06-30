@@ -1,0 +1,45 @@
+package coreExamples.aeminiumSyntax;
+
+method bar<group G1>() {
+}
+
+method shared:G Type foo<group G, group H>(immutable S x, shared:G T y) [unique U >> unique V] {
+}
+
+
+method shared:G Type <<< <group G, group H>(immutable S x, shared:G T y) [unique U >> unique V] {
+}
+
+state S {
+	owner group G;
+	
+	method unique Int + <group G>(immutable Int x, immutable Int y) [unique S >> unique S] {
+		x + y
+	}
+}
+
+method main() {
+	foo<G, H>(1, 2);
+	bar<G>();
+
+	new group G1;
+	
+	var s = new S with { owner group G = G1; };
+
+	share (G1) {
+			foo();
+		||	bar();
+		||	baz();
+	};
+	
+	share (G1) {
+		atomic (G2) {
+			foo();
+		};
+	};
+	
+	atomic (G1, G2, G3) {
+		foo();
+		bar();
+	};
+}

@@ -17,7 +17,7 @@
  *  along with Plaid Programming Language.  If not, see <http://www.gnu.org/licenses/>.
  */
  
- package plaid.runtime;
+package plaid.runtime;
 
 import static plaid.runtime.PlaidRuntimeState.RUNTIME_STATE.STOPPED;
 
@@ -329,5 +329,12 @@ public abstract class PlaidRuntime implements PlaidRuntimeState, PlaidRuntimeCon
 	public abstract PlaidClassLoader getClassLoader();
 
 	public abstract PlaidObject call(PlaidObject func, PlaidObject args);
-	
+
+	private static aeminiumruntime.Runtime aemRuntime = null; 
+	public static aeminiumruntime.Runtime getAeminium() {
+		if (aemRuntime == null) {
+			aemRuntime = aeminiumruntime.launcher.RuntimeFactory.getDebugRuntime();
+		}
+		return aemRuntime;
+	}
 }
