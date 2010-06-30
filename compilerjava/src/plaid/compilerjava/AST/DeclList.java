@@ -72,13 +72,13 @@ public class DeclList implements State {
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
 		
 		Set<String> declNames = new HashSet<String>();
-		boolean haveGroup = false;
+		boolean haveOwnerGroup = false;
 		for (Decl decl : decls) {
-			if (decl instanceof GroupDecl) {
-				if (haveGroup)
-					throw new PlaidException("Objects can be associated with at most one data group at a time.");
+			if (decl instanceof GroupDecl && (((GroupDecl) decl).isOwner())) {
+				if (haveOwnerGroup)
+					throw new PlaidException("Objects cannot be owned by more than one data group at a time.");
 				else
-					haveGroup = true;
+					haveOwnerGroup = true;
 			}
 			declNames.add(decl.getName());
 			decl.codegen(out,y,localVars);

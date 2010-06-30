@@ -254,6 +254,7 @@ TOKEN /*[IGNORE_CASE]*/:
 | 	< SHARED : "shared" >
 
 /* AEminium specific keywords */
+|	< OWNER : "owner" >
 | 	< GROUP : "group" >
 | 	< SHARE : "share" >
 |	< ATOMIC : "atomic" >
@@ -544,14 +545,15 @@ Decl Decl() :
 Decl DeclGroup() :
 {
 	Token dst;
-	Token src;}
+	Token src;
+	Token owner = null;}
 {
-		< GROUP > dst = < ID >
+		[ owner = < OWNER > ] < GROUP > dst = < ID >
 		(				< EQUALS > src = < ID > < SEMICOLON > 
 				{
-						return new GroupDecl(dst, new ID(dst.image), new ID(src.image)); 				}
+						return new GroupDecl(dst, new ID(dst.image), new ID(src.image), owner != null); 				}
 		|		< SEMICOLON >
-				{						return new GroupDecl(dst, new ID(dst.image));
+				{						return new GroupDecl(dst, new ID(dst.image), owner != null);
 				}
 		)}
 
