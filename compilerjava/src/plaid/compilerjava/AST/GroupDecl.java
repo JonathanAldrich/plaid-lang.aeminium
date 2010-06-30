@@ -13,17 +13,20 @@ public class GroupDecl implements Decl {
 	private Token token;
 	private ID dstId;
 	private ID srcId;
+	private boolean isOwner; 
 	
-	public GroupDecl(Token token, ID dstId) {
+	public GroupDecl(Token token, ID dstId, boolean owner) {
 		this.token = token;
 		this.dstId = dstId;
 		this.srcId = null;
+		this.isOwner = owner;
 	}
 	
-	public GroupDecl(Token token, ID dstId, ID srcId) {
+	public GroupDecl(Token token, ID dstId, ID srcId, boolean owner) {
 		this.token = token;
 		this.dstId = dstId;
 		this.srcId = srcId;
+		this.isOwner = owner;
 	}
 
 	@Override
@@ -59,5 +62,9 @@ public class GroupDecl implements Decl {
 		dstId.accept(visitor);
 		if (srcId != null)
 			srcId.accept(visitor);
+	}
+	
+	public boolean isOwner() {
+		return isOwner;
 	}
 }

@@ -5,7 +5,8 @@ method foo<group G, group H>(x, y) {
 }
 
 state S {
-	group I;
+	owner group I;
+	group J;
 	
 	method bar<group G, group H>(x, y) {
 		java.lang.System.out.println(x + y);
