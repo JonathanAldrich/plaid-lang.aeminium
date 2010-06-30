@@ -1,4 +1,4 @@
-package coreExamples.test2;
+package coreExamples.aeminiumSyntax2;
 
 method foo<group G, group H>(x, y) {
 	java.lang.System.out.println(x + y);
