@@ -11,7 +11,7 @@ method shared:G Type <<< <group G, group H>(immutable S x, shared:G T y) [unique
 }
 
 state S {
-	owner group G;
+	owner group O;
 	
 	method unique Int + <group G>(immutable Int x, immutable Int y) [unique S >> unique S] {
 		x + y
@@ -19,26 +19,27 @@ state S {
 }
 
 method main() {
+	new group G;
+	new group H;
+	
 	foo<G, H>(1, 2);
 	bar<G>();
 
-	new group G1;
-	
-	var s = new S with { owner group G = G1; };
+	var s = new S with { owner group O = G; };
 
-	share (G1) {
+	share (G) {
 			foo();
-		||	bar();
-		||	baz();
+		||	foo(); bar();
+		||	foo(); bar(); baz();
 	};
 	
-	share (G1) {
-		atomic (G2) {
+	share (G) {
+		atomic (H) {
 			foo();
 		};
 	};
 	
-	atomic (G1, G2, G3) {
+	atomic (G, H) {
 		foo();
 		bar();
 	};
