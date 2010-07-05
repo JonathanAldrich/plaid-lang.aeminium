@@ -19,6 +19,7 @@
  
 package plaid.compilerjava.AST;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import plaid.compilerjava.coreparser.Token;
@@ -53,12 +54,18 @@ public class ID implements Expression{
 	
 	public String getName() { return name; }
 	
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
-		out.setLocation(token);
-		String newName = CodeGen.convertOpNames(name);
-		out.assignToLookup(y.getName(), newName, CodeGen.localScope);  // y = lookup(name,currentScope);
+	@Override
+	public void codegenExpr(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+		if (!localVars.contains(this) && stateVars.contains(this)) { //Might need to add 'this' in front
+			System.out.println("inserting 'this': " + name);
+			Dereference newDeref = new Dereference(new ID("this$plaid"), this);
+			newDeref.codegenExpr(out, y, localVars, new HashSet<ID>()); //know that it is 'this.ID' so no need for stateVars when generating
+		} else {
+			out.setLocation(token);
+			String newName = CodeGen.convertOpNames(name);
+			out.assignToLookup(y.getName(), newName, CodeGen.localScope);  // y = lookup(name,currentScope);
+		}
 	}
-
 	@Override
 	public void visitChildren(ASTVisitor visitor) {
 	}

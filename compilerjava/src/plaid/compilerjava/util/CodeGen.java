@@ -111,10 +111,13 @@ public class CodeGen {
 	public static final String plaidObjectType = runtimePackage + ".PlaidObject";
 	public static final String plaidStateType = runtimePackage + ".PlaidState";
 	public static final String plaidMethodType = runtimePackage + ".PlaidMethod";
+	public static final String plaidMemberDefType = runtimePackage + ".PlaidMemberDef";
 	public static final String plaidExceptionType = runtimePackage + ".PlaidException";
 	public static final String plaidTagType = runtimePackage + ".PlaidTag";
 	public static final String delegateType = utilsPackage + ".Delegate";
 	public static final String lambdaType = utilsPackage + ".Lambda";
+	
+
 
 	
 	public CodeGen(CompilerConfiguration cc) {
@@ -165,41 +168,41 @@ public class CodeGen {
 		assign(target);
 		call(function,arg);
 		append(";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToID(String target, String val) {
 		assign(target);
 		append(val);
 		append(";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToChangedState(String target, String object, String newState) {
 		
 		assign(target);
 		changeState(object,newState);
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 
 	public final void assignToLookup(String target, String name, String scope) {
 		assign(target);
 		lookup(name, scope);
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToNewJavaObject(String target, String type) {
 		assign(target);
 		newJavaObject(type);
 		output.append(";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToNewJavaObject(String target, String type, String arg) {
 		assign(target);
 		newJavaObject(type,arg);
 		output.append(";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	//need to implement multiple argument Java constructors if needed 
@@ -210,8 +213,8 @@ public class CodeGen {
 		assign(target);
 		output.append(classLoader + ".protoField(new " + delegateType + " () {" +
 			"public " + plaidObjectType + " invoke" + "(final " + plaidObjectType + " " + thisVar + ", final " + plaidObjectType + " " + name + ") {" + 
-				"final " + plaidScopeType + " temp$c0pe = " + CodeGen.localScope + ";" + 
-				"final " + plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(temp$c0pe);");
+				"final " + plaidScopeType + " temp$c0pe = " + localScope + ";" + 
+				"final " + plaidScopeType + " " + localScope + " = " + classLoader + ".localScope(temp$c0pe);");
 	}
 	
 	
@@ -222,9 +225,9 @@ public class CodeGen {
 		// TODO: target + name is a temporary fix.  we should put the fully qualified name here
 		output.append(classLoader + ".protoMethod(\"" + target + name + "\", new " + delegateType + " () {" +
 			"public " + plaidObjectType + " invoke(final " + plaidObjectType + " " + thisVar + ", final " + plaidObjectType + " " + name + ") {" +
-				"final " + plaidScopeType + " " + CodeGen.localScope + " = " + classLoader + ".localScope(" + CodeGen.globalScope + ");" +
-				"local$c0pe.insert(\"" + name + "\", " + name + ", false" + ");" + 
-				"local$c0pe.insert(\"" + CodeGen.thisVar +"\", " + CodeGen.thisVar + ", true" + ");");
+				"final " + plaidScopeType + " " + localScope + " = " + classLoader + ".localScope(" + CodeGen.globalScope + ");");
+		insertIntoScope(localScope, name, false);
+		insertIntoScope(localScope, CodeGen.thisVar, true);
 	}
 	
 	//Complicated generation of code to wrap a first class function declaration
@@ -233,9 +236,15 @@ public class CodeGen {
 		assign(target);
 		append(classLoader + ".lambda(new " + lambdaType + " () {" + 
 			"public " + plaidObjectType + " invoke(final " + plaidObjectType + " " + varName + ") throws " + plaidExceptionType + " {" + 
-				"final " + plaidScopeType + " temp$c0pe = " + CodeGen.localScope + ";" + 
-				"final " + plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(temp$c0pe);" + 
-				"local$c0pe.insert(\"" + varName + "\", " + varName + ", false" + ");");
+				"final " + plaidScopeType + " temp$c0pe = " + localScope + ";" + 
+				"final " + plaidScopeType + " " + localScope + " = " + classLoader + ".localScope(temp$c0pe);");
+		insertIntoScope(localScope, varName, false);
+	}
+	
+	//Member Definition
+	public final void assignToNewMemberDef(String target, String varName, String definedIn, boolean mutable) {
+		assign(target);
+		append(utilClass + ".memberDef(\"" + varName + "\", " + definedIn + ", " + mutable + ");");
 	}
 	
 	public final void closeAnonymousDeclaration() {
@@ -245,62 +254,68 @@ public class CodeGen {
 	public final void assignToNewStateObject(String target) {
 		assign(target);
 		output.append(newPlaidState + ";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToNewObject(String target) {
 		assign(target);
 		output.append(newPlaidObject + ";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToInstantiation(String target, String toInstantiate) {
 		assign(target);
 		output.append(toInstantiate + ".instantiate();");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignCastedtoState(String target, String toCast) {
 		assign(target);
 		castToState(toCast);
 		append(";");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToWith(String target, String s1, String s2) {
 		assign(target);
 		with(s1,s2);
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToPrototype(String target, String state) {
 		assign(target);
 		append(state + ".getPrototype();");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToUnit(String target) {
 		assign(target);
 		append(utilClass + ".unit();");
-		updateVar(target);
+		updateVarDebugInfo(target);
+	}
+	
+	public final void assignToNewTag(String target, String tag) {
+		assign(target);
+		append(utilClass + ".tag(\"" + tag + "\");");
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToNewTag(String target, String tag, String caseOf) {
 		assign(target);
 		append(utilClass + ".tag(\"" + tag + "\", " + caseOf + ");");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToSuperTag(String target, String tag) {
 		assign(target);
 		append(tag + ".superTag();");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToStateTag(String target, String state) {
 		assign(target);
 		append(state + ".getTag();");
-		updateVar(target);
+		updateVarDebugInfo(target);
 	}
 	
 	public final void assignToQIDString(String target, String stateString) {
@@ -357,25 +372,55 @@ public class CodeGen {
 		output.append(type + " " + varName + " = " + value + ";");
 	}
 	
-	public final void declareLambdaScope() {
-		declareLambdaScope(thisVar);
+//	public final void declareLambdaScope() {
+//		declareLambdaScope(thisVar);
+//	}
+//	
+//	public final void declareLambdaScope(String var) {
+////		String theScope = IdGen.getId().getName();
+////		declareVarAssign(plaidScopeType, theScope, globalScope);
+//		// create the new local scope
+////		output.append("final " + plaidScopeType + " " + CodeGen.localScope + 
+////				" = " + classLoader + ".localScope(" + CodeGen.globalScope + ");");
+//		// add "this" to the new local scope
+////		output.append(CodeGen.localScope + ".insert(\"this$plaid\", this$plaid);");
+//		
+//	}
+	
+	public final void declareGlobalScope(String qid, String imports) {
+		output.append("public static final " + plaidScopeType + " " + globalScope + " = ");
+		output.append(classLoader + ".globalScope(\"" + qid + "\"," + imports + ");");
 	}
 	
-	public final void declareLambdaScope(String var) {
-//		String theScope = IdGen.getId().getName();
-//		declareVarAssign(plaidScopeType, theScope, globalScope);
-		// create the new local scope
-//		output.append("final " + plaidScopeType + " " + CodeGen.localScope + 
-//				" = " + classLoader + ".localScope(" + CodeGen.globalScope + ");");
-		// add "this" to the new local scope
-//		output.append(CodeGen.localScope + ".insert(\"this$plaid\", this$plaid);");
-		
+	public final void declareLocalScope(String parentScope) {
+		output.append("final " + plaidScopeType + " " + localScope + " = ");
+		output.append(classLoader + ".localScope(" + parentScope + ");");
 	}
 	
-	public final void declareTopScope(String qid, String imports) {
-		output.append("public static final " + plaidScopeType + " " + globalScope + " = " + 
-							classLoader + ".globalScope(\"" + qid + "\"," + imports + ");");
+	/*----------------------------
+	 * Scoping updates
+	 *----------------------------
+	 */
+	
+	public final void updateVarInScope(String destination, String source) {
+		ifCondition(source + " instanceof plaid.runtime.models.map.PlaidLookupMap");  //TODO : this is no keeping encapsulation of plaid.runtime.map
+		throwNewPlaidException("No object found to insert into scope");
+		elseCase();
+		output.append(localScope + ".update(\"" + destination + "\", " + source + ");");
 	}
+	
+	public final void insertIntoScope(String scope, String varName, boolean isImmutable) {
+		ifCondition(varName + " instanceof plaid.runtime.models.map.PlaidLookupMap");  //TODO : this is no keeping encapsulation of plaid.runtime.map
+		throwNewPlaidException("No object found to insert into scope");
+		elseCase();
+		output.append(scope + ".insert(\"" + varName + "\", " + varName + ", "+ isImmutable + ");");
+	}
+	
+	// TODO: use mutable to make sure that var/val is enforced
+	public void makeImmutable(String field, boolean immutable) {
+		output.append(field + ".setImmutable(" + Boolean.toString(immutable) + ");");
+	}
+	
 	
 	/*----------------------------
 	 * Java control and code structure
@@ -410,11 +455,11 @@ public class CodeGen {
 	 *----------------------------
 	 */
 	public final void addMember(String target, String memberName, String genName) {
-		output.append(target + ".addMember(\"" + memberName + "\"," + genName + ");");
+		output.append(target + ".addMember(" + memberName + "," + genName + ");");
 	}
 	
-	public final void addMember(String target, String memberName, String genName, boolean immutable) {
-		output.append(target + ".addMember(\"" + memberName + "\"," + genName + ", " + Boolean.toString(immutable) + ");");
+	public final void addTag(String target, String tagName) {
+		output.append(target + ".addTag(" + tagName + ");");
 	}
 	
 	public final void updateMember(String target, String memberName, String genName) {
@@ -453,7 +498,7 @@ public class CodeGen {
 	public final void newJavaObject(String type,String arg) {
 		output.append("new " + type + "(" + arg + ")");
 	}
-
+	
 	public final void unit() {
 		output.append( classLoader + ".unit()");
 	}
@@ -505,6 +550,7 @@ public class CodeGen {
 	 * Annotations for fields, methods, and states (intermediate format to allow pretty printing)
 	 *----------------------------
 	 */
+	
 	/**
 	 * @param name
 	 * @param toplevel
@@ -526,10 +572,11 @@ public class CodeGen {
 	/**
 	 * @param name
 	 * @param toplevel
+	 * @param members - comma separated list of member names
 	 * @return trailing @ sign to allow for correct indentation during pretty printing
 	 */
-	public final void stateAnnotation(String name, boolean toplevel) {
-		output.append("@plaid.runtime.annotations.RepresentsState(name = \"" + name + "\", toplevel = " + toplevel + ")@");
+	public final void stateAnnotation(String name, boolean toplevel, String members) {
+		output.append("@plaid.runtime.annotations.RepresentsState(name = \"" + name + "\", toplevel = " + toplevel + ", members = \"" + members + "\")@");
 	}
 	
 	/**
@@ -552,20 +599,17 @@ public class CodeGen {
 		}
 	}
 	
-	public final void updateVar(String var) {
-		updateVar(var, var);
+	public final void updateVarDebugInfo(String var) {
+		updateVarDebugInfo(var, var);
 	}
 	
-	public final void updateVar(String target, String source) {
+	public final void updateVarDebugInfo(String target, String source) {
 		if ( cc.isDebugMode() ) {
 			output.append(rt + ".updateVar(\"" + target +"\"," + source + ");" );
 		}
 	}
 	
-	public final void updateVar(ID destination, ID source) {
-		output.append("local$c0pe.update(\"" + destination.getName() + "\", " + source.getName() + ");");
-	}
-	
+
 	/*----------------------------
 	 * Methods for transforming code into (almost) human-readable Java Code
 	 *----------------------------
@@ -602,6 +646,7 @@ public class CodeGen {
 				i = search + indent(search + 1);
 				i = search + newLine(search + 1);
 				output.deleteCharAt(search);
+				i--; //reflect deleted character
 			}
 		}	
 		return output.toString();
@@ -629,20 +674,12 @@ public class CodeGen {
 	 */
 	public static void main(String args[]) {
 		CodeGen test = new CodeGen(new CompilerConfiguration());
-		test.append("@annotation(test,true)@Class A{int i;String z = \"test\";{i = 2;}}");
+		test.append("@annotation(test,true)@@annotation2(test,false)@Class A{int i;String z = \"test\";{i = 2;}}");
 		System.out.print(test.toString());
 		test.formatFile();
 		System.out.println("=>");
 		System.out.print(test.toString());
 	}
 
-	// TODO: use mutable to make sure that var/val is enforced
-	public void insertIntoScope(String scope, String varName, boolean immutable) {
-		output.append(scope + ".insert(\"" + varName + "\", " + varName + ", " + Boolean.toString(immutable) + ");");
-	}
 
-
-	public void makeImmutable(ID field, boolean immutable) {
-		output.append(field.getName() + ".setImmutable(" + Boolean.toString(immutable) + ");");
-	}
 }

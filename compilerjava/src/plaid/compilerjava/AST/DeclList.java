@@ -84,8 +84,8 @@ public class DeclList implements State {
 
 	// for state declarations
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
-		
+	public void codegenState(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, ID tagContext) {
+
 		out.setLocation(token);
 		
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
@@ -99,12 +99,7 @@ public class DeclList implements State {
 					haveOwnerGroup = true;
 			}
 			declNames.add(decl.getName());
-			System.out.println("Adding to state vars: " + decl.getName());
-			stateVars.add(new ID(decl.getName()));
-		}
-		
-		for (Decl decl : decls) {
-			decl.codegen(out, y, localVars, stateVars);
+			decl.codegenNestedDecl(out, y, localVars, stateVars, tagContext);
 		}
 		if (declNames.size() < decls.size()) {
 			throw new PlaidException("Cannot have equally named fields, methods or groups.");

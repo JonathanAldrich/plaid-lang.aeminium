@@ -642,7 +642,7 @@ Decl DeclMethod() :
 				<GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				(					<COMMA> <GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				)*
 			<GT>
 		]
-		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] e = BlockExpression(false)
+		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] (e = BlockExpression(false) | <SEMICOLON>)
 		{	
 			// separate the args from their types
 			for (Arg arg : argTypeList) {
@@ -740,7 +740,7 @@ State State() :
 				[
 						init = DeclList()
 						{
-								s = new With(s, init);
+								s = new With(s, init, true);
 						}
 				]
 		)

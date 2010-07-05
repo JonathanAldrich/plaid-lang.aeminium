@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2010 The Plaid Group (see AUTHORS file)
  * 
  * This file is part of Plaid Programming Language.
@@ -16,17 +16,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with Plaid Programming Language.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-package plaid.runtime.annotations;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+package coreExamples.cuTest;
 
-@Retention(RetentionPolicy.RUNTIME)
-public @interface RepresentsState {
-	String name();
-	String members() default "";
-	boolean toplevel() default false;
-	boolean javaobject() default false;
-	boolean stateobject() default false;
+state T {
+	val a;
+}
+
+state S = T with {
+	val b;
+	
+	//Test that a is considered as a variable in this object (this inserted during compilation)
+	method getA() { a }
+	method getB() { b }
+}
+
+method main() {
+	val s = new S { a = 1; b = 2; };
+	java.lang.System.out.print("This should be 12: ");
+	java.lang.System.out.print(s.getA());
+	java.lang.System.out.print(s.getB());
+	java.lang.System.out.println("");
+
 }

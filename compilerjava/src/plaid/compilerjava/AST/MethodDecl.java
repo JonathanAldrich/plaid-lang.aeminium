@@ -91,8 +91,8 @@ public final class MethodDecl implements Decl {
 	}
 
 	// Top-level method declaration
-	@Override
-	public File codegen(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+
+	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
 		String newName = CodeGen.convertOpNames(this.name);
 		ID freshReturn = IdGen.getId();
 		ID freshImports = IdGen.getId();
@@ -110,7 +110,7 @@ public final class MethodDecl implements Decl {
 		//generate code to create the package scope with imports
 		out.declarePublicStaticFinalVar("java.util.List<plaid.runtime.utils.Import>",freshImports.getName());
 		imports.codegen(out, freshImports);
-		out.declareTopScope(qid.toString(),freshImports.getName());
+		out.declareGlobalScope(qid.toString(),freshImports.getName());
 		
 		if (newName.equals("main") && this.methodType.getArgTypes().get(0) == PermType.UNIT && this.methodType.getArgTypes().size() == 1) {
 			out.topLevelMain(newName + "_func");
@@ -122,12 +122,14 @@ public final class MethodDecl implements Decl {
 		out.declarePublicStaticFinalVar(CodeGen.plaidMethodType, thisMethod.getName());
 		out.openStaticBlock(); // static {
 		// add local scope so that the lambda creation works properly
-		out.append("final " + CodeGen.plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(" + CodeGen.globalScope + ");");
+		//out.append("final " + CodeGen.plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(" + CodeGen.globalScope + ");");
+		out.declareLocalScope(CodeGen.globalScope);
 		out.assignToNewLambda(thisMethod.getName(),arg.getName());
 		
 		out.declareVar(CodeGen.plaidObjectType,freshReturn.getName());
 		//top level functions lookup with unit
-		body.codegen(out, freshReturn,localVars, new HashSet<ID>());
+		body.codegenExpr(out, freshReturn, localVars, new HashSet<ID>());
+
 		out.ret(freshReturn.getName());
 		out.closeAnonymousDeclaration(); // }});
 		
@@ -138,7 +140,9 @@ public final class MethodDecl implements Decl {
 	}
 
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, ID tagContext) {
+		if (abstractMethod) return; //do nothing for abstract methods
+		
 		String newName = CodeGen.convertOpNames(name);
 		out.setLocation(token);
 		ID freshMethName = IdGen.getId();
@@ -147,22 +151,37 @@ public final class MethodDecl implements Decl {
 		
 		out.methodAnnotation(newName, false); //@representsMethod...
 		out.declareFinalVar(CodeGen.plaidObjectType,freshMethName.getName());
-		out.assignToProtoMethod(freshMethName.getName(), arg.getName());  //freshMethName = new protofield( ... { {
 		
-		//body of the protofield
-		out.declareLambdaScope();
-		out.declareVar(CodeGen.plaidObjectType,freshID.getName());
+		//if (abstractMethod) { //if abstract it will just be unit
+		//	body.codegenExpr(out, freshMethName, newLocalVars, stateVars);
+		//} else { //otherwise create a protomethod
+			out.assignToProtoMethod(freshMethName.getName(), arg.getName());  //freshMethName = new protofield( ... { {
+			
+			//body of the protomethod
+			//out.declareLambdaScope();
+			out.declareVar(CodeGen.plaidObjectType,freshID.getName());
+			
+			// update var for the debugger
+			out.updateVarDebugInfo(arg.getName());
+			
+			body.codegenExpr(out, freshID, newLocalVars, stateVars);
+			out.ret(freshID.getName() );  //return freshID;
+			out.closeAnonymousDeclaration();  //}});
+		//}
 		
-		// update var for the debugger
-		out.updateVar(arg.getName());
-		
-		System.out.println("Generating body for method " + this.name);
-		body.codegen(out, freshID, newLocalVars, stateVars);
-		out.ret(freshID.getName());  //return freshID;
-		out.closeAnonymousDeclaration();  //}});
-		
+
+		//define the PlaidMemberDef
 		// TODO: methods are immutable by default?
-		out.addMember(y.getName(), newName, freshMethName.getName());  //y.addMember(name,freshMethName)
+		ID memberDef = IdGen.getId();
+		out.declareFinalVar(CodeGen.plaidMemberDefType, memberDef.getName());
+		String definedIn;
+		if (tagContext != null)
+			definedIn = tagContext.getName();
+		else
+			definedIn = "null";
+		out.assignToNewMemberDef(memberDef.getName(), newName, definedIn, false);
+	
+		out.addMember(y.getName(), memberDef.getName(), freshMethName.getName());  //y.addMember(memberDef,freshMethName)
 	}
 
 	@Override
@@ -178,7 +197,8 @@ public final class MethodDecl implements Decl {
 	}
 
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars) {
+	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
+			ID tagContext) {
 		// TODO Auto-generated method stub
 		
 	}
