@@ -32,12 +32,12 @@ public class IntLiteral implements Expression {
 	private int integer;
 	
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+	public void codegenExpr(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
 		out.setLocation(token);
 		out.assign(y.getName());
 		out.plaidInt(integer);
 		out.append(";");
-		out.updateVar(y.getName());
+		out.updateVarDebugInfo(y.getName());
 	}
 	
 	public IntLiteral(int integer) {

@@ -20,7 +20,12 @@
 package plaid.compilerjava.AST;
 
 import java.io.File;
-import java.util.*;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Stack;
 
 import plaid.compilerjava.CompilerConfiguration;
 import plaid.compilerjava.coreparser.Token;
@@ -32,6 +37,7 @@ import plaid.compilerjava.util.IdGen;
 import plaid.compilerjava.util.QualifiedID;
 import plaid.runtime.PlaidConstants;
 import plaid.runtime.Util;
+import plaid.runtime.annotations.RepresentsState;
 
 public class StateDecl implements Decl {
 
@@ -88,8 +94,51 @@ public class StateDecl implements Decl {
 		return token;
 	}
 	
+	//create a simple file with the
+//	public File generateHeader(QualifiedID qid, CompilerConfiguration cc) {
+//		
+//		CodeGen out = new CodeGen(cc);	
+//		
+//		//package and needed imports
+//		out.declarePackage(qid.toString()); //package qid;
+//		
+//		//generate list of members declared in the state (not as part of composed states)
+//		Set<String> stateVars = new HashSet<String>();
+//		Stack<State> workList = new Stack<State>();
+//		workList.push(stateDef);
+//		State s;
+//		while(!workList.isEmpty()) {
+//			s = workList.pop();
+//			if (s instanceof DeclList) {
+//				List<Decl> decls = ((DeclList) s).getDecls();
+//				for (Decl decl : decls) {
+//					stateVars.add(decl.getName());
+//				}
+//			} else if (s instanceof With) {
+//				With w = (With) s;
+//				workList.push(w.getR1());
+//				workList.push(w.getR2());
+//			} else if (s instanceof QI) {
+//				//Do nothing on first pass
+//			}
+//		}
+//		
+//		StringBuilder members = new StringBuilder();
+//		for (String member : stateVars) members.append(member + ",");
+//		String memberString = members.toString();
+//		if (memberString.length() > 0) memberString = memberString.substring(0,memberString.length()-1);
+//		
+//		// state annotation and class definition - and no more
+//		out.stateAnnotation(name.getName(), true, memberString);
+//		out.declarePublicClass(name.getName()); out.openBlock();  out.closeBlock(); // public class f { }
+//		
+//		return FileGen.createOutputFile(name.getName(), cc.getOutputDir(), out.formatFile(), qid);
+//		
+//	}
+	
 	@Override
-	public File codegen(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+
 		CodeGen out = new CodeGen(cc);	
 		ID freshImports = IdGen.getId();
 		ID theState = IdGen.getId();
@@ -97,63 +146,82 @@ public class StateDecl implements Decl {
 		//package and needed imports
 		out.declarePackage(qid.toString()); //package qid;
 		
-		//annotation and class definition
-		out.stateAnnotation(name.getName(), true);
+		//determine what members this state has and add annotations
+		Set<ID> stateVars = genStateVars(qid, imports.getImports());
+		
+		StringBuilder members = new StringBuilder();
+		for (ID member : stateVars) members.append(member.getName() + ",");
+		String memberString = members.toString();
+		if (memberString.length() > 0) memberString = memberString.substring(0,memberString.length()-1);
+		
+		// state annotation and class definition
+		out.stateAnnotation(name.getName(), true, memberString);
 		out.declarePublicClass(name.getName()); out.openBlock();  // public class f {
 		
 		//generate code to create the package scope with imports
 		out.declarePublicStaticFinalVar("java.util.List<plaid.runtime.utils.Import>",freshImports.getName());
 		imports.codegen(out, freshImports);
-		out.declareTopScope(qid.toString(),freshImports.getName());
+		out.declareGlobalScope(qid.toString(),freshImports.getName());
 		
-		out.stateAnnotation(name.getName(), false);
-		out.declarePublicStaticFinalVar(CodeGen.plaidObjectType, name.getName());
+		//Tag
+		//Declare variable to hold the tag
+		ID tag = new ID(name.getName() + "$Tag" + PlaidConstants.ID_SUFFIX);
+		String tagPath = qid.toString() + "." + name.getName();
+		out.tagAnnotation(tagPath);
+		out.declarePublicStaticFinalVar(CodeGen.plaidTagType, tag.getName());
 		
+
 		
 		out.openStaticBlock(); //static {
-		out.append("final " + CodeGen.plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(" + CodeGen.globalScope + ");");
+		if (isCaseOf) { //if we have a super tag
+			ID caseOfState = IdGen.getId();
+			ID caseOfTag = IdGen.getId();
+			out.declareFinalVar(CodeGen.plaidStateType, caseOfState.getName());
+			caseOf.codegenState(out, caseOfState, new IDList(), stateVars, null);
+			out.declareFinalVar(CodeGen.plaidTagType, caseOfTag.getName());
+			out.assignToStateTag(caseOfTag.getName(), caseOfState.getName());
+			
+			out.assignToNewTag(tag.getName(), tagPath,  caseOfTag.getName());  //tag = new PlaidTag(caseOfState)
+		} else { //if we don't
+			out.assignToNewTag(tag.getName(), tagPath);
+		}
+		out.closeBlock(); // } (for static block to init tag)
+
+		
+		//annotation for the prototype object representing the state
+		out.stateAnnotation(name.getName(), false, "");
+		out.declarePublicStaticFinalVar(CodeGen.plaidObjectType, name.getName());
+		
+		out.openStaticBlock(); //static {
+		//out.append("final " + CodeGen.plaidScopeType + " local$c0pe = new plaid.runtime.PlaidLocalScope(" + CodeGen.globalScope + ");");
+		out.declareLocalScope(CodeGen.globalScope);
 		out.declareFinalVar(CodeGen.plaidStateType, theState.getName());
+
 		IDList idList = new IDList(globalVars).add(new ID(CodeGen.thisVar)); // "this" should be visible during field initializations
-		Set<ID> stateVars = new HashSet<ID>();
-		stateDef.codegen(out, theState, idList, stateVars);//this is this declaration.  It will not have any members, but at runtime can forward to its enclosing (instantiated) state
+		
+		stateDef.codegenState(out, theState, idList, stateVars, tag);//this is this declaration.  It will not have any members, but at runtime can forward to its enclosing (instantiated) state
+
 		out.assignToPrototype(name.getName(), theState.getName());
 		
-		out.closeBlock(); // } (for static block)
-		
-		if (isCaseOf) { //Declare variable to hold the tag
-			ID tag = new ID(name.getName() + "$Tag" + PlaidConstants.ID_SUFFIX);
-			ID caseOfState = IdGen.getId();
-			
-			String tagPath = qid.toString() + "." + name.getName();
-			out.tagAnnotation(tagPath);
-			out.declarePublicStaticFinalVar(CodeGen.plaidTagType, tag.getName());
-			
-			out.openStaticBlock(); //static {
-			out.declareFinalVar(CodeGen.plaidStateType, caseOfState.getName());
-			caseOf.codegen(out, caseOfState, idList, stateVars);
-			
-			out.assignToNewTag(tag.getName(), tagPath,  caseOfState.getName());  //tag = new PlaidTag(caseOfState)
-			
-			out.closeBlock(); // } (for static block)
-		}
-		
-		
+		out.closeBlock(); // } (for static block to init prototype)
+
 		out.closeBlock(); // } (for class Def)
-		
-		
 		
 		return FileGen.createOutputFile(name.getName(), cc.getOutputDir(), out.formatFile(), qid);
 		
 	}
 
+	//TODO : when will this codegen be called?
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, ID tagContext) {
+
 		out.setLocation(token);
 		
 		ID fresh = IdGen.getId();
-		out.stateAnnotation(name.getName(), false);
+		out.stateAnnotation(name.getName(), false, "");
 		out.declareFinalVar(CodeGen.plaidObjectType, fresh.getName());
-		stateDef.codegen(out, fresh, localVars, stateVars);
+		stateDef.codegenState(out, fresh, localVars, stateVars, tagContext);
+
 		// TODO: State decls are immutable by default
 		out.addMember(y.getName(), name.getName(), fresh.getName()); //y.addMember(s,fresh)
 	}
@@ -170,9 +238,81 @@ public class StateDecl implements Decl {
 	}
 
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars) {
+	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
+			ID tagContext) {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
+	private Set<ID> genStateVars(QualifiedID qid, List<QualifiedID> imports) {
+		Set<ID> stateVars = new HashSet<ID>();
+		Stack<State> workList = new Stack<State>();
+		workList.push(stateDef);
+		
+		//This seems the wrong way to do this...
+		List<QualifiedID> statepath = new ArrayList<QualifiedID>();
+		List<String> qidList = qid.getQidList();
+		List<String> newQidList = new ArrayList<String>();
+		newQidList.addAll(qidList);
+		newQidList.add("*");
+		QualifiedID declPackageQid = new QualifiedID(newQidList);
+		statepath.add(declPackageQid);
+		statepath.addAll(imports);
+		
+		State s;
+		while(!workList.isEmpty()) {
+			s = workList.pop();
+			if (s instanceof DeclList) {
+				List<Decl> decls = ((DeclList) s).getDecls();
+				for (Decl decl : decls) {
+					//System.out.println("Adding to state vars: " + decl.getName());
+					stateVars.add(new ID(decl.getName()));
+				}
+			} else if (s instanceof With) {
+				With w = (With) s;
+				workList.push(w.getR1());
+				workList.push(w.getR2());
+			} else if (s instanceof QI) {
+				
+				loadStateMembers(((QI) s).toString(), statepath, stateVars);
+			}
+		}
+		
+		return stateVars;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void loadStateMembers(String stateName, List<QualifiedID> statepath, Set<ID> stateVars) {
+		ClassLoader cl = this.getClass().getClassLoader();
+		
+		List<String> toLookup = new ArrayList<String>();
+		toLookup.add(stateName);
+		for (QualifiedID i : statepath) {
+			String theImport = i.toString();
+			if (theImport.endsWith(stateName)) toLookup.add(theImport);
+			else if (theImport.endsWith("*")) toLookup.add(theImport.substring(0,theImport.length()-1) + stateName);
+		}
+		
+		Class<Object> obj = null;
+		for (String lkup : toLookup) {
+		
+			String names[] = {lkup + PlaidConstants.ID_SUFFIX, lkup};
+			for ( String current : names) {
+				try {
+					obj = (Class<Object>) cl.loadClass(current);
+					for (Annotation a : obj.getAnnotations()) {
+						if (a instanceof RepresentsState) {
+							String memberString = ((RepresentsState) a).members();
+							for (String s : memberString.split(",")) stateVars.add(new ID(s));
+						}
+					}
+					return; //once we've found the class, we're done
+				} catch (ClassNotFoundException e) {
+					// If there is no classfile then we need to keep searching
+				}
+			}
+		}
+		
+		
+	}
 }

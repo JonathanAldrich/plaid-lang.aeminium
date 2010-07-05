@@ -40,13 +40,13 @@ public class UnitLiteral implements Expression {
 		return token;
 	}
 	
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+	public void codegenExpr(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
 		
 		out.setLocation(token);
 		out.assign(y.getName());
 		out.unit();
 		out.append(";");
-		out.updateVar(y.getName());
+		out.updateVarDebugInfo(y.getName());
 	}
 
 	@Override

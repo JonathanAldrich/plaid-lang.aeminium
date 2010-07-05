@@ -21,6 +21,8 @@ package plaid.runtime;
 
 import java.util.List;
 
+import plaid.runtime.models.map.PlaidGlobalScopeMap;
+import plaid.runtime.models.map.PlaidLocalScopeMap;
 import plaid.runtime.utils.Delegate;
 import plaid.runtime.utils.Import;
 import plaid.runtime.utils.Lambda;
@@ -105,10 +107,18 @@ public interface PlaidClassLoader {
 	 * return a new Tag Object
 	 * 
 	 * @param tag  (the QI of the state with the tag)
+	 * @return
+	 */
+	public PlaidTag tag(String tagName);
+	
+	/**
+	 * return a new Tag Object
+	 * 
+	 * @param tag  (the QI of the state with the tag)
 	 * @param caseOf (the PlaidState representing the state this tag is a case of)
 	 * @return
 	 */
-	public PlaidTag tag(String tag, PlaidState caseOf);
+	public PlaidTag tag(String tagName, PlaidTag caseOf);
 	
 	/**
 	 * TODO: Document
@@ -123,12 +133,21 @@ public interface PlaidClassLoader {
 	 * @param imports
 	 * @return
 	 */
-	public PlaidGlobalScope globalScope(String qi, List<Import> imports);
+	public PlaidGlobalScopeMap globalScope(String qi, List<Import> imports);
 	
 	/**
 	 * TODO: Document
 	 * @param parentScope
 	 * @return
 	 */
-	public PlaidLocalScope localScope(PlaidScope parentScope);
+	public PlaidLocalScopeMap localScope(PlaidScope parentScope);
+	
+	/**
+	 * Returns a member definition object
+	 * @param memberName - the name of the member
+	 * @param definedIn - the tag which the member is defined in (null if anonymous)
+	 * @param mutable - set to true if this is a mutable member
+	 * @return
+	 */
+	public PlaidMemberDef memberDef(String memberName, PlaidTag definedIn, boolean mutable);
 }
