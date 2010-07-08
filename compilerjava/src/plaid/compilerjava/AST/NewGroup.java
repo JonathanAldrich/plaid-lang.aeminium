@@ -17,7 +17,7 @@ public class NewGroup implements Expression {
 	}
 
 	@Override
-	public void codegen(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
+	public void codegenExpr(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
 		// TODO Auto-generated method stub
 	}
 
