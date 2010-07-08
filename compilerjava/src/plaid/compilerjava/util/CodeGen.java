@@ -77,6 +77,7 @@ public class CodeGen {
 	public static final String runtimePackage = "plaid.runtime";
 	public static final String classLoader = runtimePackage + ".PlaidRuntime.getRuntime().getClassLoader()";
 	public static final String rt = runtimePackage + ".PlaidRuntime.getRuntime()";
+	public static final String aemRt = runtimePackage + ".PlaidRuntime.getAeminium()";
 	public static final String globalScope = "global$c0pe";
 	public static final String localScope = "local$c0pe";
 	public static final String utilClass = runtimePackage + ".Util";
@@ -530,6 +531,7 @@ public class CodeGen {
 		append("public static void main(String[] args) {");
 		append("plaid.lang.Sys.setArgs(args,0);"); 
 		append(rt + ".init();");
+		append(aemRt + ".init();");
 		if ( cc.isDebugMode() ) { 
 			String name = functionName.substring(0, functionName.length()-"_func".length());
 			append(rt + ".enterCall(" + classLoader + ".unit(),\"" + name +"\");");
@@ -539,6 +541,7 @@ public class CodeGen {
 			String name = functionName.substring(0, functionName.length()-"_func".length());
 			append(rt + ".leaveCall(" + classLoader + ".unit(),\"" + name +"\");");
 		}
+		append(aemRt + ".shutdown();");
 		append(rt + ".shutdown();");
 		append("}");
 	}
