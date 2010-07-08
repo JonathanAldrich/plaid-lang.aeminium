@@ -47,4 +47,6 @@ public interface PlaidState extends PlaidObject {
 	public boolean hasTag() throws PlaidException;
 	
 	public PlaidTag getTag() throws PlaidException;
+	
+	public String getPath();
 }

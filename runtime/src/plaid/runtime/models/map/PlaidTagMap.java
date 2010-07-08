@@ -1,23 +1,37 @@
 package plaid.runtime.models.map;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import plaid.runtime.PlaidState;
 import plaid.runtime.PlaidTag;
 
 public class PlaidTagMap implements PlaidTag {
 
-	private String tagName;
-	private PlaidTag caseOf;
+	private String theCase;
+	private PlaidState caseOf;
 	private boolean hasSuperTag;
+	private String root;
+	private List<String> hierarchy = new ArrayList<String>();
 	
-	public PlaidTagMap(String tagName) {
-		this.tagName = tagName;
-		hasSuperTag = false;
-		
+	public PlaidTagMap(String theCase, PlaidState caseOf) {
+		this.theCase = theCase;
+		this.caseOf = caseOf;
+		hasSuperTag = caseOf.hasTag();
+		hierarchy.add(theCase);
+		PlaidTag findRoot = this;
+		while (findRoot.hasSuperTag()) {
+			hierarchy.add(findRoot.caseOf().getPath());
+			findRoot = findRoot.superTag();
+		}
+		root = findRoot.caseOf().getPath();
+		hierarchy.add(root);
 	}
 	
-	public PlaidTagMap(String tagName, PlaidTag caseOf) {
-		this.tagName = tagName;
-		this.caseOf = caseOf;
-		hasSuperTag = (caseOf != null);
+	@Override
+	public PlaidState caseOf() {
+		return caseOf;
 	}
 
 	@Override
@@ -27,20 +41,25 @@ public class PlaidTagMap implements PlaidTag {
 
 	@Override
 	public PlaidTag superTag() {
-		return caseOf;
+		return caseOf.getTag();
 	}
 
 	public String toString() {
-		String s = "Tag<" + tagName;
-		if (hasSuperTag)
-			return  s + " of " + caseOf.getName() + ">";
-		else
-			return s + ">";
+		return "Tag<" + theCase + " of " + caseOf.toString().substring(5);	
 	}
 	
 	public String getName() {
-			return tagName;
+			return theCase;
 	}
+	
+	public String rootState() {
+		return root;
+	}
+	
+	public List<String> getHierarchy() {
+		return Collections.unmodifiableList(hierarchy);
+	}
+	
 	
 	public boolean matches(String tag) {
 		if (tag.equals(getName())){
