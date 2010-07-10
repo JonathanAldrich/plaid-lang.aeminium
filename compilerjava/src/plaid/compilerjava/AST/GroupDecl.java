@@ -31,24 +31,17 @@ public class GroupDecl implements Decl {
 	}
 
 	@Override
-	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
-			ID tagContext) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
-			Set<ID> stateVars, ID tagContext) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public File codegenTopDecl(QualifiedID qid, ImportList imports,
 			CompilerConfiguration cc, Set<ID> stateVars) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+	
+	@Override
+	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
+			Set<ID> stateVars, String stateContext) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
