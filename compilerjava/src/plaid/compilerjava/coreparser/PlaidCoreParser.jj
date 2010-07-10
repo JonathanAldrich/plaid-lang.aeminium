@@ -251,6 +251,13 @@ TOKEN /*[IGNORE_CASE]*/:
 | 	< UNIT : "unit" >
 | 	< FULL : "full" >
 | 	< PURE : "pure" >
+| 	< SHARED : "shared" >
+
+/* AEminium specific keywords */
+|	< OWNER : "owner" >
+| 	< GROUP : "group" >
+| 	< SHARE : "share" >
+|	< ATOMIC : "atomic" >
 }
 
 /* Literals */
@@ -382,9 +389,9 @@ List < Token > Package() :
 		}
 }
 
-/*****************************************************************************/
-/*								TYPING RULES	 							 */
-/*****************************************************************************/
+//
+// TYPING RULES
+//
 
 PermType PermType() :
 {
@@ -407,14 +414,21 @@ PermType PermType() :
 
 Permission Permission() :
 {	Permission perm;
+	Token t;
 }
-{	(	<FULL>	{
+{	<FULL>	{
 	  	return Permission.FULL;	}
 | 	<IMMUTABLE>	{
 	  	return Permission.IMMUTABLE;	}
 | 	<PURE>	{
 	  	return Permission.PURE;	}
-	)
+| 	<UNIQUE>
+	{		return Permission.UNIQUE;
+	}
+| 	<SHARED> [ <COLON> t = <ID> ]
+	{
+		// TODO: Link permission to data group		return Permission.SHARED;
+	}
 }
 
 Type StructuralType() :
@@ -423,12 +437,12 @@ Type StructuralType() :
 	List<TypeDecl> typeDecls;
 }
 {
-  	(
+	(
   	// type abbreviation	typeAbbrevTok = <ID> [<WITH> right = StructuralType()]
 	{		return (new Type(new ID(typeAbbrevTok.image))).compose(right);
 	}
 	// type declarations
-| 	typeDecls = TypeDecls() [<WITH> right = StructuralType()]
+|	typeDecls = TypeDecls() [<WITH> right = StructuralType()]
 	{
 	  	return (new Type(typeDecls)).compose(right);	}
 	)
@@ -483,9 +497,9 @@ FieldTypeDecl FieldTypeDecl() :{
   	{
   	  	return new FieldTypeDecl(fieldPermType);  	}}
 
-/*****************************************************************************/
-/*							END OF TYPING RULES								 */
-/*****************************************************************************/
+//
+// END OF TYPING RULES
+//
 
 ImportList Imports() :
 {
@@ -523,7 +537,25 @@ Decl Decl() :
 		{
 				return d;
 		}
+|		d = DeclGroup()
+		{
+				return d;		}		
 }
+
+Decl DeclGroup() :
+{
+	Token dst;
+	Token src;
+	Token owner = null;}
+{
+		[ owner = < OWNER > ] < GROUP > dst = < ID >
+		(				< EQUALS > src = < ID > < SEMICOLON > 
+				{
+						return new GroupDecl(dst, new ID(dst.image), new ID(src.image), owner != null); 				}
+		|		< SEMICOLON >
+				{						return new GroupDecl(dst, new ID(dst.image), owner != null);
+				}
+		)}
 
 Decl DeclState() :
 {
@@ -589,6 +621,7 @@ Decl DeclMethod() :
 {
 		Token t;
 		Token typeToken = null;
+		Token groupToken = null;
 		PermType recvState1 = null;
 		PermType recvState2 = null;
 		ID name;
@@ -600,10 +633,16 @@ Decl DeclMethod() :
 		List<ID> argList = new ArrayList<ID>();
 		MethodDecl d;
 		PermType retPermType = null;
+		List<ID> groupList = new ArrayList<ID>();
 }
 {
 		t = <METHOD> 
-		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator()) 
+		(LOOKAHEAD(PermType() IdOrOperator()) retPermType = PermType() name = IdOrOperator() | name = IdOrOperator())
+		[
+			<LT>
+				<GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				(					<COMMA> <GROUP> groupToken = <ID> { groupList.add(new ID(groupToken, groupToken.image)); }				)*
+			<GT>
+		]
 		<LPAREN> [argTypeList = DeclArgs()] <RPAREN> [<LBRACK> recvState1 = PermType() <MARROW> recvState2 = PermType() <RBRACK>] (e = BlockExpression(false) | <SEMICOLON>)
 		{	
 			// separate the args from their types
@@ -674,9 +713,11 @@ Arg Arg() :
 {
 	PermType permType = null;
 	Token argToken = null;
+	List<ID> idList;
 }
 {
-  	(LOOKAHEAD(PermType() <ID>) permType = PermType() argToken = <ID> | argToken = <ID>) 
+	// TODO: Link idList to AST
+  	(LOOKAHEAD(PermType() [<LT> idList = IdList() <GT>] <ID>) permType = PermType() [<LT> idList = IdList() <GT>] argToken = <ID> | argToken = <ID>) 
 	{
 	  	// TODO: Should dyn be the default?
 	  	if (permType == null) {			permType = PermType.DYN;
@@ -790,11 +831,24 @@ Expression StmtListSemi() :
 		}
 }
 
+Expression StmtListSemiNotOptional() :
+{
+		ArrayList < Expression > expList = new ArrayList < Expression > ();
+		Expression e;
+}
+{
+		(e = Stmt() < SEMICOLON > { expList.add(e); })+
+		{
+				return foldExpListSemi(expList);
+		}
+}
+
 Expression Stmt() :
 {
 		Expression e;
 }
 {
+		LOOKAHEAD(2)
 		e = Exp()
 		{
 				return e;
@@ -803,9 +857,86 @@ Expression Stmt() :
 		{
 				return e;
 		} //var/val required for local variable declaration
+|		e = GroupOperation()
+		{
+				return e;
+		}
 }
 
+Expression GroupOperation() :
+{
+	Expression e;
+}
+{
+		e = ShareBlock()
+		{
+				return e;
+		}
+|		e = AtomicBlock()
+		{
+				return e;
+		}
+|		e = CreateGroup()
+		{				return e;
+		}
+}
 
+Expression ShareBlock() :
+{
+	Token t, gt;
+	ID group;
+	Expression stmtList;
+	List < Expression > stmtLists = new ArrayList < Expression > (); 
+}
+{
+	t = < SHARE > < LPAREN > gt = < ID > { group = new ID(gt, gt.image); } < RPAREN >
+	< LBRACE >
+		stmtList = StmtListSemiNotOptional() { stmtLists.add(stmtList); }
+		(
+			< OR >
+			stmtList = StmtListSemiNotOptional() { stmtLists.add(stmtList); }
+		)*
+	< RBRACE >
+	{
+		return new Share(t, group, stmtLists);
+	}
+}
+
+Expression AtomicBlock() :
+{
+	Token t, gt;
+	List<ID> groupList = new ArrayList<ID>();
+	Expression stmtList; 
+}
+{
+	t = < ATOMIC > < LPAREN >
+	(
+		(gt = < ID >)
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+		(< COMMA > gt = < ID >)*
+		{
+			groupList.add(new ID(gt, gt.image));
+		}
+	)
+	< RPAREN >
+	< LBRACE >
+		stmtList = StmtListSemi()
+	< RBRACE >
+	{
+		return new Atomic(t, groupList, stmtList);
+	}
+}
+
+Expression CreateGroup() :
+{
+		Token t;
+		Token groupName;}
+{
+		t = < NEW > < GROUP > groupName = < ID >
+		{
+				return new NewGroup(t, new ID(groupName, groupName.image));		}}
 
 Expression Exp() :
 {
@@ -836,7 +967,7 @@ Expression InfixExp() :
 {
 		e = SimpleExp()
 		(
-				(t = < ID > | t = < OP >)
+				(t = < ID > | t = <OP>)
 				arg = SimpleExp()
 				{
 						e = opMethodCall(t, e, arg);
@@ -1191,6 +1322,58 @@ ID IdOrOperator() :
 		}
 }
 
+List<ID> IdList() :
+{
+	List<ID> ids = new ArrayList<ID>();
+	Token t;
+}
+{
+	(
+		(t = < ID >)
+		{
+			ids.add(new ID(t, t.image));
+		}
+		(< COMMA > t = < ID >)*
+		{
+			ids.add(new ID(t, t.image));
+		}
+	)
+	{
+		return ids;
+	}
+}
+
+Expression IdentifierGroupParamsCallOptional(Expression obj) :
+{
+		Token t;
+		Expression e;
+		Expression arg = new UnitLiteral();
+		List<ID> params;
+		List < Expression > curriedArgs = new ArrayList< Expression >();}
+{
+	(		t = < ID >
+		{
+				if (obj == null)
+					e = new ID(t, t.image);
+				else
+					e = new Dereference(t, obj, new ID(t.image));					
+		}
+		[
+				LOOKAHEAD(< LT > IdList() < GT >)
+				(
+					< LT > params = IdList() < GT > < LPAREN > [ arg = ExpList() ] < RPAREN >
+					{
+							curriedArgs.add(arg);
+					}
+				)
+		]
+		{
+				e = foldCurriedArgs(e, curriedArgs);		}
+	)
+	{		return e;
+	}
+}
+
 Expression SimpleExp() :
 {
 		Token t;
@@ -1210,12 +1393,10 @@ Expression SimpleExp() :
 		}
 |
 		(
-				(t = < ID > | t = <THIS>)
-				{
-						e = new ID(t, t.image);
-				}
+				t = < THIS > { e = new ID(t, t.image); }
 		|		t = < LPAREN > e = ExpList() < RPAREN >
 		|		e = Literal()
+		|		e = IdentifierGroupParamsCallOptional(null)
 		)
 		(
 				arg = ArgExp()
@@ -1228,10 +1409,10 @@ Expression SimpleExp() :
 			curriedArgs = new ArrayList < Expression > ();		  
 		}
 		(
-				< DOT > (t = < ID > | t = < NEW >)
-				{
-					e = new Dereference(t, e, new ID(t.image));
-				}
+				< DOT >
+				(	t = < NEW > { e = new Dereference(t, e, new ID(t.image)); }
+				|	e = IdentifierGroupParamsCallOptional(e)
+				)
 				(
 					arg = ArgExp()
 					{						curriedArgs.add(arg);
@@ -1257,7 +1438,7 @@ Expression ArgExp() :
 		}
 |		< LPAREN > [ e = ExpList() ] < RPAREN >
 		{
-				return e;
+			return e;
 		}
 }
 

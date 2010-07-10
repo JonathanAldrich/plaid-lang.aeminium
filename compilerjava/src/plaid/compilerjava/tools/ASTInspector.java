@@ -18,7 +18,7 @@ import plaid.runtime.PlaidException;
 
 public class ASTInspector {
 	public static void main(String[] args) throws PlaidException, FileNotFoundException, ParseException {
-		File plaidFile = new File("coreExamples/functionalStyle.plaid");
+		File plaidFile = new File("coreExamples/aeminiumSyntax2.plaid");
 		CompilationUnit root = ParserCore.parse(new FileInputStream(plaidFile));
 		System.out.println("drawing AST...");
 		drawAST(root);
@@ -35,7 +35,7 @@ public class ASTInspector {
 	}
 	
 	public static <T extends ASTnode> void drawAST(T root) {
-		JFrame mainFrame = new JFrame("Plaid AST Insepctor");
+		JFrame mainFrame = new JFrame("Plaid AST Inspector");
 		mainFrame.add(new ASTInspectorPanel(genTreeViewAST(root)));
 		mainFrame.setMinimumSize(new Dimension(500, 500));
 		mainFrame.pack();
