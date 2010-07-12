@@ -340,6 +340,7 @@ public abstract class PlaidRuntime implements PlaidRuntimeState, PlaidRuntimeCon
 		}
 		
 		triggerVariableUpdate(new PlaidRuntimeVariableUpdateEvent(this, name, o));
+		checkRuntimeState();
 	}
 
 	public static PlaidRuntime getRuntime() {
