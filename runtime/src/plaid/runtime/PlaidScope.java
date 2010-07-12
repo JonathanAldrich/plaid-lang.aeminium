@@ -50,7 +50,7 @@ public interface PlaidScope {
 	 * 
 	 * @param name
 	 */
-	public void remove(String name);
+//	public void remove(String name);
 
 //	/**
 //	 * Inserts all of the members of the specified object into the current 
