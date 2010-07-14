@@ -119,7 +119,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		return currentScope.lookup(name);
 	}
 
-	protected PlaidObject lookup(PlaidLookupMap lookup) throws PlaidClassNotFoundException {
+	private PlaidObject lookup(PlaidLookupMap lookup) throws PlaidClassNotFoundException {
 		synchronized (singletonsLock) {
 			QualifiedIdentifier lookupAtTopLevel = lookup.getToLookup();
 			QualifiedIdentifier lookupInPackage = lookup.getThePackage().append(lookupAtTopLevel);
@@ -146,6 +146,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		}
 	}
 	
+	@Override
 	public PlaidObject loadClass(String name) throws PlaidClassNotFoundException {
 		synchronized (singletonsLock) {
 			if ( singletons.containsKey(name) ) {
@@ -169,6 +170,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		}
 	}
 
+	@Override
 	public PlaidJavaObject packJavaObject(Object o) throws PlaidException {
 		return new PlaidJavaObjectMap(o);
 	}
@@ -210,7 +212,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	 * 
 	 ***************************************************************************/
 	
-	protected PlaidObject createPlaidObjectFromClass(QualifiedIdentifier qi, Class<Object> objClass) throws PlaidException {
+	private PlaidObject createPlaidObjectFromClass(QualifiedIdentifier qi, Class<Object> objClass) throws PlaidException {
 		if (  objClass.getAnnotation(RepresentsState.class) != null ) {
 			RepresentsState psa = objClass.getAnnotation(RepresentsState.class);
 			return createTopLevelPlaidStateFromClass(qi, psa, objClass);
@@ -231,7 +233,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		}
 	}
 
-	protected PlaidObject createTopLevelPlaidStateFromClass(QualifiedIdentifier qi, 
+	private PlaidObject createTopLevelPlaidStateFromClass(QualifiedIdentifier qi, 
 															RepresentsState psa, 
 															Class<Object> objClass) throws PlaidException {
 		synchronized (singletonsLock) {
@@ -247,7 +249,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		}
 	}
 
-	protected PlaidObject createTopLevelPlaidMethodFromClass(QualifiedIdentifier qi,
+	private PlaidObject createTopLevelPlaidMethodFromClass(QualifiedIdentifier qi,
 															 RepresentsMethod pma, 
 															 Class<Object> objClass) throws PlaidException {
 		synchronized (singletonsLock) {
@@ -272,7 +274,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		}
 	}
 
-	protected PlaidObject createTopLevelPlaidFieldFromClass(QualifiedIdentifier qi,
+	private PlaidObject createTopLevelPlaidFieldFromClass(QualifiedIdentifier qi,
 															RepresentsField pfa, 
 															Class<Object> objClass) throws PlaidException {
 		synchronized (singletonsLock) {

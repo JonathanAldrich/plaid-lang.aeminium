@@ -23,7 +23,6 @@ import plaid.runtime.utils.QualifiedIdentifier;
 public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 	private final Set<Import> imports;
 	private final QualifiedIdentifier globalPackage;
-	private final Object scopeLock = new Object();
 	
 	private static final Map<QualifiedIdentifier, PlaidGlobalScopeMap> 
 		globalScopes = new HashMap<QualifiedIdentifier, PlaidGlobalScopeMap>();
@@ -31,30 +30,31 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 	private PlaidGlobalScopeMap(String qi, List<Import> imports) {
 		super();
 		this.imports = new HashSet<Import>(imports);
-		this.imports.add(new Import(qi + ".*"));
+		addImport(new Import(qi + ".*"));
 		this.globalPackage = new QualifiedIdentifier(qi);
 	}
 	
-	public void addImport(Import imp) {
-		synchronized (scopeLock) {
+	private void addImport(Import imp) {
+		synchronized (this.imports) {
 			this.imports.add(imp);
 		}
 	}
 	
-	public void addImports(Collection<Import> imports) {
-		synchronized (scopeLock) {
+	private void addImports(Collection<Import> imports) {
+		synchronized (this.imports) {
 			this.imports.addAll(imports);
 		}
 	}
 	
+	@Override
 	public PlaidObject lookup(String name) {
-		synchronized (scopeLock) {
-			// check scope map
-			if (this.mutableScopeMap.containsKey(name))
-				return this.mutableScopeMap.get(name);
-			else if (this.immutableScopeMap.containsKey(name))
-				return this.immutableScopeMap.get(name);
-			
+		// check scope map
+		if (this.mutableScopeMap.containsKey(name))
+			return this.mutableScopeMap.get(name);
+		else if (this.immutableScopeMap.containsKey(name))
+			return this.immutableScopeMap.get(name);
+
+		synchronized (this.imports) {
 			for (Import imp : this.imports) {
 				PlaidClassLoader cl = PlaidRuntime.getRuntime().getClassLoader();
 				if (imp.isStar()) {
@@ -81,58 +81,52 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 						}
 						else {
 							throw new PlaidClassNotFoundException(
-								"Cannot find class : "+imp.getIdent().toString());
+									"Cannot find class : "+imp.getIdent().toString());
 						}
 					} 
 				}
 			}
-	
-			// couldn't find anything, so return a lookup map so they can try again
-			return new PlaidLookupMap(this.globalPackage, 
-									  new QualifiedIdentifier(name));
 		}
+
+		// couldn't find anything, so return a lookup map so they can try again
+		return new PlaidLookupMap(this.globalPackage, new QualifiedIdentifier(name));
 	}
 	
 	@Override
 	public PlaidObject shallowLookup(String name) {
-		synchronized (scopeLock) {
-			// check scope map
-			if (this.mutableScopeMap.containsKey(name))
-				return this.mutableScopeMap.get(name);
-			else if (this.immutableScopeMap.containsKey(name))
-				return this.immutableScopeMap.get(name);
-			else
-				return null;
-		}
+		// check scope map
+		if (this.mutableScopeMap.containsKey(name))
+			return this.mutableScopeMap.get(name);
+		else if (this.immutableScopeMap.containsKey(name))
+			return this.immutableScopeMap.get(name);
+		else
+			return null;
 	}
 	
 	@Override
 	public void insert(String name, PlaidObject plaidObj, boolean immutable) {
-		synchronized (scopeLock) {
-			if (this.immutableScopeMap.containsKey(name) || 
+		if (this.immutableScopeMap.containsKey(name) || 
 				this.mutableScopeMap.containsKey(name)) {
-				throw new PlaidRuntimeException("Cannot insert '" + name + 
-						"': already defined in current scope.");
-			}
-			
-			if (immutable) {
-				this.immutableScopeMap.put(name, plaidObj);
-			}
-			else {
-				this.mutableScopeMap.put(name, plaidObj);
-			}
+			throw new PlaidRuntimeException("Cannot insert '" + name + 
+			"': already defined in current scope.");
+		}
+
+		if (immutable) {
+			this.immutableScopeMap.put(name, plaidObj);
+		}
+		else {
+			this.mutableScopeMap.put(name, plaidObj);
 		}
 	}
 	
+	@Override
 	public void update(String name, PlaidObject plaidObj) {
-		synchronized (scopeLock) {
-			if (this.immutableScopeMap.containsKey(name)) {
-				throw new PlaidRuntimeException("Cannot assign to variables " +
-												"declared with \"val\".");
-			}
-			else if (this.mutableScopeMap.containsKey(name)) {		
-				this.mutableScopeMap.put(name, plaidObj);
-			}
+		if (this.immutableScopeMap.containsKey(name)) {
+			throw new PlaidRuntimeException("Cannot assign to variables " +
+			"declared with \"val\".");
+		}
+		else if (this.mutableScopeMap.containsKey(name)) {		
+			this.mutableScopeMap.put(name, plaidObj);
 		}
 	}
 	
@@ -162,19 +156,17 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 		}
 	}
 	
-//	@Override
-//	public void remove(String name) {
-//		synchronized (scopeLock) {
-//			if (this.immutableScopeMap.containsKey(name)) {
-//				this.immutableScopeMap.remove(name);
-//			}
-//			else if (this.mutableScopeMap.containsKey(name)) {
-//				this.mutableScopeMap.remove(name);
-//			}
-//			else {
-//				throw new PlaidUnboundVariableException("Variable does not " +
-//				"exist in global scope.");
-//			}
-//		}
-//	}
+	@Override
+	public void remove(String name) {
+		if (this.immutableScopeMap.containsKey(name)) {
+			this.immutableScopeMap.remove(name);
+		}
+		else if (this.mutableScopeMap.containsKey(name)) {
+			this.mutableScopeMap.remove(name);
+		}
+		else {
+			throw new PlaidUnboundVariableException("Variable does not " +
+			"exist in global scope.");
+		}
+	}
 }
