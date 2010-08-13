@@ -47,7 +47,6 @@ import plaid.runtime.utils.Lambda;
 import plaid.runtime.utils.QualifiedIdentifier;
 
 public final class PlaidClassLoaderMap implements PlaidClassLoader {
-	private PlaidRuntimeMap runtime;
 	private final HashMap<String, PlaidObject> singletons = new HashMap<String, PlaidObject>();
 	private final Object singletonsLock = new Object();
 	private final PlaidObject unit;
@@ -55,8 +54,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	private static volatile PlaidClassLoaderMap loader = null;
 	private static Object loaderLock = new Object();
 	
-	private PlaidClassLoaderMap(PlaidRuntimeMap runtime) {
-		this.runtime = runtime;
+	private PlaidClassLoaderMap() {
 		unit = loadClass("plaid.lang.Unit");
 		((PlaidObjectMap)unit).setReadOnly(false);
 		unit.addState(unit);

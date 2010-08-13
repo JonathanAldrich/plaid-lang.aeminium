@@ -13,8 +13,6 @@ public class Permission implements ASTnode, JSONAware {
 	public static final Permission UNIQUE = new Permission(null, "unique");
 	public static final Permission SHARED = new Permission(null, "shared");
 	public static final Permission DYN = new Permission(null, "dyn");
-	public static final Permission UNIQUE = new Permission(null, "unique");
-	public static final Permission SHARED = new Permission(null, "shared");
 	
 	// This is a marker to indicate that the permission of the receiver should remain unchanged
 	public static final Permission RECEIVER = new Permission(null, "receiver");

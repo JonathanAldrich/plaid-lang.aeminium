@@ -53,7 +53,7 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 	}
 	
 	private void addImports(Collection<Import> imports) {
-		synchronized {
+		synchronized (importsLock) {
 			for (Import imp : imports)
 				this.addImport(imp);
 		}

@@ -30,12 +30,12 @@ public class Share implements Expression {
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		group.accept(visitor);
 		for (Expression e : stmtLists)
 			e.accept(visitor);
