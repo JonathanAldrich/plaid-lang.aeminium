@@ -8,6 +8,8 @@ import plaid.compilerjava.coreparser.Token;
 import plaid.compilerjava.tools.ASTVisitor;
 import plaid.compilerjava.util.CodeGen;
 import plaid.compilerjava.util.IDList;
+import plaid.compilerjava.util.MemberRep;
+import plaid.compilerjava.util.PackageRep;
 import plaid.compilerjava.util.QualifiedID;
 
 public class GroupDecl implements Decl {
@@ -29,14 +31,21 @@ public class GroupDecl implements Decl {
 		this.srcId = srcId;
 		this.isOwner = owner;
 	}
-
+	
 	@Override
 	public File codegenTopDecl(QualifiedID qid, ImportList imports,
-			CompilerConfiguration cc, Set<ID> stateVars) {
+			CompilerConfiguration cc, Set<ID> globalVars, PackageRep plaidPath) {
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
+	@Override
+	public MemberRep generateHeader(PackageRep plaidpath, ImportList imports,
+			String inPackage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	@Override
 	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars,
 			Set<ID> stateVars, String stateContext) {
@@ -51,8 +60,8 @@ public class GroupDecl implements Decl {
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 	@Override
@@ -61,7 +70,7 @@ public class GroupDecl implements Decl {
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		dstId.accept(visitor);
 		if (srcId != null)
 			srcId.accept(visitor);

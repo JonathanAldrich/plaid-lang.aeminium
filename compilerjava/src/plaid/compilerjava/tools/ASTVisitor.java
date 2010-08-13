@@ -51,4 +51,9 @@ public interface ASTVisitor<T> {
 	public T visitNode(TypeDecl node);
 	public T visitNode(UnitLiteral node);
 	public T visitNode(With node);
+	
+	public T visitNode(Atomic node);
+	public T visitNode(GroupDecl node);
+	public T visitNode(NewGroup node);
+	public T visitNode(Share node);
 }

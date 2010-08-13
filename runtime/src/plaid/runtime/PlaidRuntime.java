@@ -39,7 +39,7 @@ public abstract class PlaidRuntime implements PlaidRuntimeState, PlaidRuntimeCon
 	// static fields
 	private static volatile PlaidRuntime runtime = null;
 	private static Object runtimeLock = new Object();
-	private static volatile aeminiumruntime.Runtime aemRuntime = null;
+	private static volatile aeminium.runtime.Runtime aemRuntime = null;
 	private static Object aeminiumLock = new Object();
 
 	// instance fields
@@ -354,12 +354,12 @@ public abstract class PlaidRuntime implements PlaidRuntimeState, PlaidRuntimeCon
 		return runtime;
 	}
 	
-	public static aeminiumruntime.Runtime getAeminium() {
+	public static aeminium.runtime.Runtime getAeminium() {
 		// Double-checked locking is safe because aemRuntime is declared volatile
 		if (aemRuntime == null) {
 			synchronized (aeminiumLock) {
 				if (aemRuntime == null)
-					aemRuntime = aeminiumruntime.launcher.RuntimeFactory.getDebugRuntime();
+					aemRuntime = aeminium.runtime.implementations.Factory.getRuntime();
 			}
 		}
 		return aemRuntime;
