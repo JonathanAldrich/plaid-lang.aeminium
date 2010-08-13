@@ -5,16 +5,18 @@ import plaid.compilerjava.tools.ASTVisitor;
 
 public class FieldTypeDecl implements TypeDecl {
 	private final PermType permType;
+	private final ID name;
 	
-	public FieldTypeDecl(PermType permType) {
+	public FieldTypeDecl(ID name, PermType permType) {
+		this.name = name;
 		if (permType == null)
 			throw new RuntimeException("permType cannot be null");
 		this.permType = permType;
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 	@Override
@@ -24,12 +26,16 @@ public class FieldTypeDecl implements TypeDecl {
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		this.permType.accept(visitor);
 	}
 
-	public Object getPermType() {
+	public PermType getPermType() {
 		return this.permType;
+	}
+	
+	public ID getName() {
+		return this.name;
 	}
 
 }

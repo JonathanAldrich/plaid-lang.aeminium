@@ -134,7 +134,7 @@ public class Case implements ASTnode {
 			
 			//generate code to get the state to match against
 			out.declareFinalVar(CodeGen.plaidStateType,potentialMatch.getName());
-			qi.codegenState(out, potentialMatch, localVars, stateVars, null);
+			qi.codegenState(out, potentialMatch, localVars, stateVars, CodeGen.anonymousDeclaration);
 			
 			out.declareFinalVar("String", potentialMatchTagString.getName());
 			out.assignToQIDString(potentialMatchTagString.getName(), potentialMatch.getName());
@@ -153,7 +153,7 @@ public class Case implements ASTnode {
 	}
 	
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		if (qi != null)
 			qi.accept(visitor);
 		if (x != null)
@@ -163,7 +163,7 @@ public class Case implements ASTnode {
 	}
 	
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 }

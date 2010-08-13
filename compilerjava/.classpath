@@ -8,5 +8,6 @@
 	<classpathentry kind="lib" path="bin" sourcepath="src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/stdlib"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Aeminium"/>
+	<classpathentry kind="lib" path="json_simple-1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

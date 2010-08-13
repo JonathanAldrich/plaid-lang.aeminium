@@ -19,6 +19,8 @@
  
 package plaid.compilerjava.AST;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import plaid.compilerjava.coreparser.Token;
@@ -26,6 +28,7 @@ import plaid.compilerjava.tools.ASTVisitor;
 import plaid.compilerjava.util.CodeGen;
 import plaid.compilerjava.util.IDList;
 import plaid.compilerjava.util.IdGen;
+import plaid.compilerjava.util.PackageRep;
 
 public class With implements State {
 
@@ -88,16 +91,16 @@ public class With implements State {
 		
 		out.assignToWith(y.getName(),fresh1.getName(),fresh2.getName());  //y = fresh1.with(fresh2); 
 	}
-
+	
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		r1.accept(visitor);
 		r2.accept(visitor);
 	}
 	
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 //	@Override

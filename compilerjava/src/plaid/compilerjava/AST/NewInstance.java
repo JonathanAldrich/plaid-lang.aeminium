@@ -71,18 +71,18 @@ public class NewInstance implements Expression{
 		ID r = IdGen.getId();
 		out.declareFinalVar(CodeGen.plaidStateType, r.getName()); 
 
-		st.codegenState(out, r, localVars, stateVars, "<Anonymous>");
+		st.codegenState(out, r, localVars, stateVars, CodeGen.anonymousDeclaration);
 
 		out.assignToInstantiation(y.getName(),r.getName()); //y = r.instantiate();
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		st.accept(visitor);
 	}
 	
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 }

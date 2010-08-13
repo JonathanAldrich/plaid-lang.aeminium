@@ -34,9 +34,9 @@ public final class Lambda implements Expression {
 	private final MethodTypeDecl methodType;
 	
 	// TODO: I'm not sure that this is a very good constructor...
-	public Lambda(ID var, Expression body) {
-		this(null, var, body, new MethodTypeDecl(null, null, null, null));
-	}
+//	public Lambda(ID var, Expression body) {
+//		this(null, var, body, new MethodTypeDecl(null, null, null, null, null));
+//	}
 
 	public Lambda(Token token, ID var, Expression body, MethodTypeDecl methodType) {
 		super();
@@ -67,8 +67,6 @@ public final class Lambda implements Expression {
 
 	@Override
 	public void codegenExpr(CodeGen out, ID y, IDList localVars, Set<ID> stateVars) {
-
-		
 		out.setLocation(token);
 		
 		ID freshID = IdGen.getId();
@@ -84,13 +82,13 @@ public final class Lambda implements Expression {
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		var.accept(visitor);
 		body.accept(visitor);
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 }

@@ -24,17 +24,17 @@ import java.util.ArrayList;
 import plaid.runtime.PlaidException;
 import plaid.runtime.PlaidJavaObject;
 import plaid.runtime.PlaidMemberDef;
-import plaid.runtime.PlaidScope;
 import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.PlaidScope;
 import plaid.runtime.Util;
+import plaid.runtime.annotations.RepresentsMethod;
 import plaid.runtime.annotations.RepresentsState;
 import plaid.runtime.models.map.PlaidLocalScopeMap;
 import plaid.runtime.utils.Delegate;
 import plaid.runtime.utils.Import;
 
-@RepresentsState(name="Integer", toplevel=true, javaobject=true)
+@RepresentsState(name="Integer", inPackage = "plaid.lang", toplevel=true, javaobject=true, jsonRep = "{\"member_type\": \"state\",\"name\": \"Integer\",\"members\": [{\"member_type\": \"method\",\"name\": \"+\",\"ret_type\": \"plaid.lang.Integer\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"-\",\"ret_type\": \"plaid.lang.Integer\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"*\",\"ret_type\": \"plaid.lang.Integer\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"/\",\"ret_type\": \"plaid.lang.Integer\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"%\",\"ret_type\": \"plaid.lang.Integer\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"==\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"!=\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"<\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \">\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \"<=\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],},{\"member_type\": \"method\",\"name\": \">=\",\"ret_type\": \"plaid.lang.Boolean\",\"arg_types\": [\"plaid.lang.Integer\",\"plaid.lang.Integer\"],}]}")
 public class Integer$plaid {
 	public static PlaidScope globalScope = PlaidRuntime.getRuntime().getClassLoader().globalScope("plaid.lang", new ArrayList<Import>());
 	
@@ -42,8 +42,9 @@ public class Integer$plaid {
 	public static PlaidObject foo = Util.newState();
 	
 	static {
-		PlaidMemberDef plus = Util.memberDef("plus$plaid", "plaid.lang.Integer", false);
-		foo.addMember(plus, Util.protoMethod("plaid.lang.Integer.plus$plaid", new Delegate() {
+		PlaidMemberDef plus = Util.memberDef("plus$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "plus$plaid", toplevel = false)
+		PlaidObject plusProtoMethod = Util.protoMethod("plaid.lang.Integer.plus$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -52,10 +53,12 @@ public class Integer$plaid {
 					((Integer)((PlaidJavaObject)args).getJavaObject()).intValue();
 				return Util.integer(x);
 			}
-		}));
+		});
+		foo.addMember(plus, plusProtoMethod);
 		
-		PlaidMemberDef sub = Util.memberDef("sub$plaid", "plaid.lang.Integer", false);
-		foo.addMember(sub, Util.protoMethod("plaid.lang.Integer.sub$plaid", new Delegate() {
+		PlaidMemberDef sub = Util.memberDef("sub$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "sub$plaid", toplevel = false)
+		PlaidObject subProtoMethod = Util.protoMethod("plaid.lang.Integer.sub$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -64,10 +67,12 @@ public class Integer$plaid {
 					((Integer)((PlaidJavaObject)args).getJavaObject()).intValue();
 				return Util.integer(x);
 			}
-		}));
+		});
+		foo.addMember(sub, subProtoMethod);
 		
-		PlaidMemberDef mult = Util.memberDef("mult$plaid", "plaid.lang.Integer", false);
-		foo.addMember(mult, Util.protoMethod("plaid.lang.Integer.mult$plaid", new Delegate() {
+		PlaidMemberDef mult = Util.memberDef("mult$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "mult$plaid", toplevel = false)
+		PlaidObject multProtoMethod = Util.protoMethod("plaid.lang.Integer.mult$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -76,10 +81,12 @@ public class Integer$plaid {
 				((Integer)((PlaidJavaObject)args).getJavaObject()).intValue();
 				return Util.integer(x);
 			}
-		}));
+		});
+		foo.addMember(mult, multProtoMethod);
 		
-		PlaidMemberDef div = Util.memberDef("div$plaid", "plaid.lang.Integer", false);
-		foo.addMember(div, Util.protoMethod("plaid.lang.Integer.div$plaid", new Delegate() {
+		PlaidMemberDef div = Util.memberDef("div$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "div$plaid", toplevel = false)
+		PlaidObject divProtoMethod = Util.protoMethod("plaid.lang.Integer.div$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -88,10 +95,12 @@ public class Integer$plaid {
 					((Integer)((PlaidJavaObject)args).getJavaObject()).intValue();
 				return Util.integer(x);
 			}
-		})/*, true*/);
+		});
+		foo.addMember(div, divProtoMethod);
 		
-		PlaidMemberDef mod = Util.memberDef("mod$plaid", "plaid.lang.Integer", false);
-		foo.addMember(mod, Util.protoMethod("plaid.lang.Integer.mod$plaid", new Delegate() {
+		PlaidMemberDef mod = Util.memberDef("mod$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "mod$plaid", toplevel = false)
+		PlaidObject modProtoMethod = Util.protoMethod("plaid.lang.Integer.mod$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -100,10 +109,12 @@ public class Integer$plaid {
 					((Integer)((PlaidJavaObject)args).getJavaObject()).intValue();
 				return Util.integer(x);
 			}
-		})/*, true*/);
+		});
+		foo.addMember(mod, modProtoMethod);
 		
-		PlaidMemberDef eqeq = Util.memberDef("eqeq$plaid", "plaid.lang.Integer", false);
-		foo.addMember(eqeq, Util.protoMethod("plaid.lang.Integer.eqeq$plaid", new Delegate() {
+		PlaidMemberDef eqeq = Util.memberDef("eqeq$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "eqeq$plaid", toplevel = false)
+		PlaidObject eqeqProtoMethod = Util.protoMethod("plaid.lang.Integer.eqeq$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -115,10 +126,12 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);
+		});
+		foo.addMember(eqeq, eqeqProtoMethod);
 		
-		PlaidMemberDef bangeq = Util.memberDef("bangeq$plaid", "plaid.lang.Integer", false);
-		foo.addMember(bangeq, Util.protoMethod("plaid.lang.Integer.bangeq$plaid", new Delegate() {
+		PlaidMemberDef bangeq = Util.memberDef("bangeq$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "bangeq$plaid", toplevel = false)
+		PlaidObject bangeqProtoMethod = Util.protoMethod("plaid.lang.Integer.bangeq$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -130,10 +143,12 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);
+		});
+		foo.addMember(bangeq, bangeqProtoMethod);
 		
-		PlaidMemberDef lt = Util.memberDef("lt$plaid", "plaid.lang.Integer", false);
-		foo.addMember(lt, Util.protoMethod("plaid.lang.Integer.lt$plaid", new Delegate() {
+		PlaidMemberDef lt = Util.memberDef("lt$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "lt$plaid", toplevel = false)
+		PlaidObject ltProtoMethod = Util.protoMethod("plaid.lang.Integer.lt$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -145,10 +160,12 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);
+		});
+		foo.addMember(lt, ltProtoMethod);
 		
-		PlaidMemberDef gt = Util.memberDef("gt$plaid", "plaid.lang.Integer", false);
-		foo.addMember(gt, Util.protoMethod("plaid.lang.Integer.gt$plaid", new Delegate() {
+		PlaidMemberDef gt = Util.memberDef("gt$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "gt$plaid", toplevel = false)
+		PlaidObject gtProtoMethod = Util.protoMethod("plaid.lang.Integer.gt$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -160,10 +177,12 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);
+		});
+		foo.addMember(gt, gtProtoMethod);
 		
-		PlaidMemberDef lteq = Util.memberDef("lteq$plaid", "plaid.lang.Integer", false);
-		foo.addMember(lteq, Util.protoMethod("plaid.lang.Integer.lteq$plaid", new Delegate() {
+		PlaidMemberDef lteq = Util.memberDef("lteq$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "lteq$plaid", toplevel = false)
+		PlaidObject lteqProtoMethod = Util.protoMethod("plaid.lang.Integer.lteq$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -175,10 +194,12 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);
+		});
+		foo.addMember(lteq, lteqProtoMethod);
 
-		PlaidMemberDef gteq = Util.memberDef("gteq$plaid", "plaid.lang.Integer", false);
-		foo.addMember(gteq, Util.protoMethod("plaid.lang.Integer.gteq$plaid", new Delegate() {
+		PlaidMemberDef gteq = Util.memberDef("gteq$plaid", "plaid.lang.Integer", false, false);
+		@RepresentsMethod(name = "gteq$plaid", toplevel = false)
+		PlaidObject gteqProtoMethod = Util.protoMethod("plaid.lang.Integer.gteq$plaid", new Delegate() {
 			@Override
 			public PlaidObject invoke(PlaidObject thisVar, PlaidObject args)  throws PlaidException {
 				@SuppressWarnings("unused")
@@ -190,6 +211,7 @@ public class Integer$plaid {
 				else
 					return Util.falseObject();
 			}
-		})/*, true*/);	
+		});
+		foo.addMember(gteq, gteqProtoMethod);	
 	}
 }

@@ -5,6 +5,8 @@ syntax: glob
 *.class
 *.swp
 *.DS_Store
+.DS_Store
+*.classpath
 
 # docs
 *.log
@@ -32,7 +34,9 @@ stdlib/src/plaid/lang/Pair.java
 stdlib/src/plaid/lang/Some.java
 stdlib/src/plaid/lang/True.java
 stdlib/src/plaid/lang/While.java
+stdlib/src/plaid/lang/Exception.java
 stdlib/src/plaid/lang/false$plaid.java
+stdlib/src/plaid/lang/makePair.java
 stdlib/src/plaid/lang/if$plaid.java
 stdlib/src/plaid/lang/true$plaid.java
 stdlib/src/plaid/lang/while$plaid.java
@@ -63,8 +67,7 @@ builder/
 
 
 # typechecker
-typechecker/src/coreExamples/*
-
+typechecker/src/*
 
 # plaid apps
 plaidapps/src

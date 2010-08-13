@@ -47,6 +47,7 @@ import plaid.runtime.utils.Lambda;
 import plaid.runtime.utils.QualifiedIdentifier;
 
 public final class PlaidClassLoaderMap implements PlaidClassLoader {
+	private PlaidRuntimeMap runtime;
 	private final HashMap<String, PlaidObject> singletons = new HashMap<String, PlaidObject>();
 	private final Object singletonsLock = new Object();
 	private final PlaidObject unit;
@@ -54,7 +55,8 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	private static volatile PlaidClassLoaderMap loader = null;
 	private static Object loaderLock = new Object();
 	
-	private PlaidClassLoaderMap() {
+	private PlaidClassLoaderMap(PlaidRuntimeMap runtime) {
+		this.runtime = runtime;
 		unit = loadClass("plaid.lang.Unit");
 		((PlaidObjectMap)unit).setReadOnly(false);
 		unit.addState(unit);
@@ -79,7 +81,9 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 					PlaidJavaStateMap pjsm = (PlaidJavaStateMap)pthis;
 					Map<PlaidMemberDef, PlaidObject> members = pjsm.prototype.getMembers();
 					for (PlaidMemberDef m : members.keySet()) {
-						if (m.getMemberName().equals(name)) return members.get(m);
+						if (m.getMemberName().equals(name)) {
+							return members.get(m);
+						}
 					}
 				}
 				else {
@@ -306,8 +310,8 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	}
 	
 	@Override
-	public PlaidMemberDef memberDef(String memberName, String definedIn, boolean mutable){
-		return new PlaidMemberDefMap(memberName, definedIn, mutable);
+	public PlaidMemberDef memberDef(String memberName, boolean anonymous, String definedIn, boolean mutable, boolean overrides) {
+		return new PlaidMemberDefMap(memberName, anonymous, definedIn, mutable, overrides);
 	}
 	
 	public static PlaidClassLoaderMap getClassLoader() {

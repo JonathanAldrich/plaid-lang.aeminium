@@ -21,7 +21,8 @@ package plaid.compilerjava.AST;
 
 
 import java.io.File;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 import plaid.compilerjava.CompilerConfiguration;
 import plaid.compilerjava.coreparser.Token;
@@ -30,6 +31,9 @@ import plaid.compilerjava.util.CodeGen;
 import plaid.compilerjava.util.FileGen;
 import plaid.compilerjava.util.IDList;
 import plaid.compilerjava.util.IdGen;
+import plaid.compilerjava.util.MemberRep;
+import plaid.compilerjava.util.MethodRep;
+import plaid.compilerjava.util.PackageRep;
 import plaid.compilerjava.util.QualifiedID;
 import plaid.runtime.PlaidConstants;
 import plaid.runtime.Util;
@@ -41,9 +45,10 @@ public final class MethodDecl implements Decl {
 	private final ID arg;
 	private final boolean abstractMethod;
 	private final MethodTypeDecl methodType;
+	private final boolean overrides;
 	
-	public MethodDecl(Token t, String name, Expression body, ID arg, boolean abstractMethod, MethodTypeDecl methodType) {
-		this.token = t;
+	public MethodDecl(Token token, String name, Expression body, ID arg, boolean abstractMethod, MethodTypeDecl methodType, boolean overrides) {
+		this.token = token;
 		if (Util.isKeyword(name))
 			this.name = name + PlaidConstants.ID_SUFFIX;
 		else
@@ -60,6 +65,7 @@ public final class MethodDecl implements Decl {
 			throw new RuntimeException("Method type is not allowed to be null.");
 		this.methodType = methodType;
 		this.abstractMethod = abstractMethod;
+		this.overrides = overrides;
 	}
 
 	public boolean isAbstractMethod() {
@@ -86,25 +92,25 @@ public final class MethodDecl implements Decl {
 		return body;
 	}
 
-	public Token getToken() {
-		return token;
+	public MemberRep generateHeader(PackageRep plaidpath, ImportList imports, String inPackage) {
+		return new MethodRep(name);
 	}
-
+	
 	// Top-level method declaration
-
-	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars, PackageRep plaidpath) {
 		String newName = CodeGen.convertOpNames(this.name);
 		ID freshReturn = IdGen.getId();
 		ID freshImports = IdGen.getId();
 		CodeGen out = new CodeGen(cc);
 		IDList localVars = new IDList(globalVars);
 		ID thisMethod = new ID(newName + "_func");
+		String thePackage = qid.toString();
 		
 		//package and needed imports
-		out.declarePackage(qid.toString());
+		out.declarePackage(thePackage);
 		
 		//annotation and class definition
-		out.methodAnnotation(newName, true);
+		out.topMethodAnnotation(newName, thePackage);
 		out.declarePublicClass(newName); out.openBlock(); //public class newName {
 
 		//generate code to create the package scope with imports
@@ -118,7 +124,7 @@ public final class MethodDecl implements Decl {
 			localVars = localVars.add(arg);
 		}
 		
-		out.methodAnnotation(newName, false);
+		out.methodAnnotation(newName);
 		out.declarePublicStaticFinalVar(CodeGen.plaidMethodType, thisMethod.getName());
 		out.openStaticBlock(); // static {
 		// add local scope so that the lambda creation works properly
@@ -141,7 +147,7 @@ public final class MethodDecl implements Decl {
 
 	@Override
 	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, String stateContext) {
-		if (abstractMethod) return; //do nothing for abstract methods
+		//if (abstractMethod) return; //do nothing for abstract methods
 		
 		String newName = CodeGen.convertOpNames(name);
 		out.setLocation(token);
@@ -149,12 +155,12 @@ public final class MethodDecl implements Decl {
 		ID freshID = IdGen.getId();
 		IDList newLocalVars = localVars.add(arg);
 		
-		out.methodAnnotation(newName, false); //@representsMethod...
+		out.methodAnnotation(newName); //@representsMethod(... toplevel = false)
 		out.declareFinalVar(CodeGen.plaidObjectType,freshMethName.getName());
 		
-		//if (abstractMethod) { //if abstract it will just be unit - won't be added to initialized object
-		//	body.codegenExpr(out, freshMethName, newLocalVars, stateVars);
-		//} else { //otherwise create a protomethod
+		if (abstractMethod) { //if abstract it will just be unit - won't be added to initialized object
+			body.codegenExpr(out, freshMethName, newLocalVars, stateVars);
+		} else { //otherwise create a protomethod
 			out.assignToProtoMethod(freshMethName.getName(), arg.getName(), stateContext + "." + name);  //freshMethName = new protofield( ... { {
 			
 			//body of the protomethod
@@ -167,32 +173,36 @@ public final class MethodDecl implements Decl {
 			body.codegenExpr(out, freshID, newLocalVars, stateVars);
 			out.ret(freshID.getName() );  //return freshID;
 			out.closeAnonymousDeclaration();  //}});
-		//}
+		}
 		
 		//define the PlaidMemberDef
 		// TODO: methods are immutable by default?
 		ID memberDef = IdGen.getId();
 		out.declareFinalVar(CodeGen.plaidMemberDefType, memberDef.getName());
-//		String definedIn;
-//		if (stateContext != null)
-//			definedIn = stateContext;
-//		else
-//			definedIn = "<Anonymous>";
-		out.assignToNewMemberDef(memberDef.getName(), newName, stateContext, false);
-	
+		if (stateContext.equals(CodeGen.anonymousDeclaration))
+			out.assignToAnonymousMemberDef(memberDef.getName(), newName, false, overrides);
+		else
+			out.assignToNewMemberDef(memberDef.getName(), newName, stateContext, false, overrides);
+		
+		
 		out.addMember(y.getName(), memberDef.getName(), freshMethName.getName());  //y.addMember(memberDef,freshMethName)
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		this.body.accept(visitor);
 		this.arg.accept(visitor);
 		this.methodType.accept(visitor);
 	}
 	
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
+	}
+
+	@Override
+	public Token getToken() {
+		return null;
 	}
 
 //	@Override
@@ -201,4 +211,12 @@ public final class MethodDecl implements Decl {
 //		// TODO Auto-generated method stub
 //		
 //	}
+	
+	@Override
+	public String toString() {
+		StringBuilder toRet= new StringBuilder();
+		if (abstractMethod) toRet.append("abstract ");
+		toRet.append("method " + name);
+		return toRet.toString();
+	}
 }

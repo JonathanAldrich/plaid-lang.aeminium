@@ -20,15 +20,19 @@
 package plaid.compilerjava.AST;
 
 import java.io.File;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 import plaid.compilerjava.CompilerConfiguration;
 import plaid.compilerjava.coreparser.Token;
 import plaid.compilerjava.tools.ASTVisitor;
 import plaid.compilerjava.util.CodeGen;
+import plaid.compilerjava.util.FieldRep;
 import plaid.compilerjava.util.FileGen;
 import plaid.compilerjava.util.IDList;
 import plaid.compilerjava.util.IdGen;
+import plaid.compilerjava.util.MemberRep;
+import plaid.compilerjava.util.PackageRep;
 import plaid.compilerjava.util.QualifiedID;
 import plaid.runtime.PlaidConstants;
 import plaid.runtime.Util;
@@ -40,12 +44,13 @@ public class FieldDecl implements Decl{
 	private final boolean abstractField;
 	private final boolean immutable;
 	private final FieldTypeDecl fieldType;
+	private final boolean overrides;
 	
 	public boolean isAbstractField() {
 		return abstractField;
 	}
 
-	public FieldDecl(Token t, ID f, Expression e, boolean abstractField, boolean immutable, FieldTypeDecl fieldType) {
+	public FieldDecl(Token t, ID f, Expression e, boolean abstractField, boolean immutable, FieldTypeDecl fieldType, boolean overrides) {
 		super();
 		this.token = t;
 		this.setF(f);
@@ -53,10 +58,11 @@ public class FieldDecl implements Decl{
 		this.abstractField = abstractField;
 		this.fieldType = fieldType;
 		this.immutable = immutable;
+		this.overrides = overrides;
 	}
 
 	public FieldDecl(ID f, Expression e) {
-		this(null, f, e, false, true, new FieldTypeDecl(PermType.RECEIVER));
+		this(null, f, e, false, true, new FieldTypeDecl(f, PermType.RECEIVER), false);
 	}
 	
 	public ID getF() {
@@ -90,18 +96,24 @@ public class FieldDecl implements Decl{
 		return this.f.getName();
 	}
 
+	@Override
+	public MemberRep generateHeader(PackageRep plaidpath, ImportList imports, String inPackage) {
+		return new FieldRep(f.getName());
+	}
+	
 	//Top Level Field Decl
 	@Override
-	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars, PackageRep plaidpath) {
 		CodeGen out = new CodeGen(cc);
 		IDList localVars = new IDList(globalVars);
 		ID freshImports = IdGen.getId();
+		String thePackage = qid.toString();
 		
 		//package and needed imports
-		out.declarePackage(qid.toString()); //package qid;
+		out.declarePackage(thePackage); //package qid;
 		
 		//annotation and class definition
-		out.fieldAnnotation(f.getName(), true);
+		out.topFieldAnnotation(f.getName(), thePackage);
 		out.declarePublicClass(f.getName()); out.openBlock();  // public class f {
 		
 		//generate code to create the package scope with imports
@@ -110,7 +122,7 @@ public class FieldDecl implements Decl{
 		out.declareGlobalScope(qid.toString(),freshImports.getName());
 		
 		//generate code to represent the field as a java field
-		out.fieldAnnotation(f.getName(), false);
+		out.fieldAnnotation(f.getName());
 		out.declarePublicStaticVar(CodeGen.plaidObjectType, f.getName());
 		out.openStaticBlock(); //static {
 		// TODO: make this a function
@@ -131,7 +143,7 @@ public class FieldDecl implements Decl{
 	@Override
 	public void codegenNestedDecl(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, String stateContext) {
 
-		if (abstractField) return;  //do nothing for abstract fields
+		//if (abstractField) return;  //do nothing for abstract fields
 		
 		out.setLocation(token);
 		
@@ -139,46 +151,42 @@ public class FieldDecl implements Decl{
 		ID freshFieldName = IdGen.getId();
 		ID x = IdGen.getId();
 		
-		out.fieldAnnotation(f.getName(), false);  //@representsField...
+		out.fieldAnnotation(f.getName());  //@representsField(... toplevel = false)
 		out.declareFinalVar(CodeGen.plaidObjectType,freshFieldName.getName());
 		
-//		if (abstractField) {
-//			e.codegenExpr(out, freshFieldName, localVars, stateVars);  //field will just have the unit value if it is abstract - won't be initialized 
-//		} else {
+		if (abstractField) {
+			e.codegenExpr(out, freshFieldName, localVars, stateVars);  //field will just have the unit value if it is abstract - won't be initialized 
+		} else {
 			out.assignToProtoField(freshFieldName.getName(), x.getName()); // freshFieldName = new protoField... {
 			
 			//protofield body
-			//out.declareLambdaScope();
 			out.declareFinalVar(CodeGen.plaidObjectType, fresh1.getName()); //Public PlaidObect fresh1;
 			e.codegenExpr(out, fresh1, localVars, stateVars);  //field initializer code
 			out.ret(fresh1.getName()); // return fresh1;
 			out.closeAnonymousDeclaration(); // }});
-		//}
+		}
 		//define the PlaidMemberDef
-		// TODO: methods are immutable by default?
 		ID memberDef = IdGen.getId();
 		out.declareFinalVar(CodeGen.plaidMemberDefType, memberDef.getName());
-//		String definedIn;
-//		if (stateContext != null)
-//			definedIn = stateContext;
-//		else
-//			definedIn = "<Anonymous>";
-		out.assignToNewMemberDef(memberDef.getName(), f.getName(), stateContext, !immutable);
+		if (stateContext.equals(CodeGen.anonymousDeclaration))
+			out.assignToAnonymousMemberDef(memberDef.getName(), f.getName(), !immutable, overrides);
+		else
+			out.assignToNewMemberDef(memberDef.getName(), f.getName(), stateContext, !immutable, overrides);
 		
 		out.addMember(y.getName(), memberDef.getName(), freshFieldName.getName());  //y.addMember(f,freshFieldName)
 		
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		this.f.accept(visitor);
 		this.fieldType.accept(visitor);
 		this.e.accept(visitor);
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 	public boolean getImmutable() {
@@ -191,6 +199,14 @@ public class FieldDecl implements Decl{
 //		// TODO Auto-generated method stub
 //		
 //	}
+	
+	@Override
+	public String toString() {
+		StringBuilder toRet= new StringBuilder();
+		if (abstractField) toRet.append("abstract ");
+		toRet.append("field " + f.getName());
+		return toRet.toString();
+	}
 
 
 }

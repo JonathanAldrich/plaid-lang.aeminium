@@ -20,8 +20,6 @@
 package plaid.compilerjava.AST;
 
 import java.io.File;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,10 +29,15 @@ import plaid.compilerjava.CompilerConfiguration;
 import plaid.compilerjava.coreparser.Token;
 import plaid.compilerjava.tools.ASTVisitor;
 import plaid.compilerjava.util.CodeGen;
+import plaid.compilerjava.util.FieldRep;
 import plaid.compilerjava.util.FileGen;
 import plaid.compilerjava.util.IDList;
 import plaid.compilerjava.util.IdGen;
+import plaid.compilerjava.util.MemberRep;
+import plaid.compilerjava.util.MethodRep;
+import plaid.compilerjava.util.PackageRep;
 import plaid.compilerjava.util.QualifiedID;
+import plaid.compilerjava.util.StateRep;
 import plaid.runtime.PlaidConstants;
 import plaid.runtime.Util;
 
@@ -45,26 +48,26 @@ public class StateDecl implements Decl {
 	private State stateDef;
 	private QI caseOf;
 	private boolean isCaseOf;
+	private final Permission defaultPerm;
 	
-	public StateDecl(Token t, ID name, State stateDef) {
+	public StateDecl(Token t, ID name, State stateDef, Permission defaultPerm) {
+		this(t, name, stateDef, null, defaultPerm);
+	}
+	
+	public StateDecl(Token t, ID name, State stateDef, QI caseOf, Permission defaultPerm) {
 		super();
 		this.token = t;
 		this.setName(name);
 		this.setStateDef(stateDef);
-		isCaseOf = false;
-	}
-	
-	public StateDecl(Token t, ID name, State stateDef, QI caseOf) {
-		super();
-		this.token = t;
-		this.setName(name);
-		this.setStateDef(stateDef);
-		this.caseOf = caseOf;
-		isCaseOf = true;
-	}
-	
-	public StateDecl(Token t) {
-		this.token = t;
+		if (caseOf == null) {
+			this.caseOf = null;
+			isCaseOf = false;
+		}
+		else {
+			this.caseOf = caseOf;
+			isCaseOf = true;
+		}
+		this.defaultPerm = defaultPerm;
 	}
 
 	public ID getID() {
@@ -93,48 +96,6 @@ public class StateDecl implements Decl {
 		return token;
 	}
 	
-	//create a simple file with the
-//	public File generateHeader(QualifiedID qid, CompilerConfiguration cc) {
-//		
-//		CodeGen out = new CodeGen(cc);	
-//		
-//		//package and needed imports
-//		out.declarePackage(qid.toString()); //package qid;
-//		
-//		//generate list of members declared in the state (not as part of composed states)
-//		Set<String> stateVars = new HashSet<String>();
-//		Stack<State> workList = new Stack<State>();
-//		workList.push(stateDef);
-//		State s;
-//		while(!workList.isEmpty()) {
-//			s = workList.pop();
-//			if (s instanceof DeclList) {
-//				List<Decl> decls = ((DeclList) s).getDecls();
-//				for (Decl decl : decls) {
-//					stateVars.add(decl.getName());
-//				}
-//			} else if (s instanceof With) {
-//				With w = (With) s;
-//				workList.push(w.getR1());
-//				workList.push(w.getR2());
-//			} else if (s instanceof QI) {
-//				//Do nothing on first pass
-//			}
-//		}
-//		
-//		StringBuilder members = new StringBuilder();
-//		for (String member : stateVars) members.append(member + ",");
-//		String memberString = members.toString();
-//		if (memberString.length() > 0) memberString = memberString.substring(0,memberString.length()-1);
-//		
-//		// state annotation and class definition - and no more
-//		out.stateAnnotation(name.getName(), true, memberString);
-//		out.declarePublicClass(name.getName()); out.openBlock();  out.closeBlock(); // public class f { }
-//		
-//		return FileGen.createOutputFile(name.getName(), cc.getOutputDir(), out.formatFile(), qid);
-//		
-//	}
-	
 	public QI getCaseOf() {
 		return caseOf;
 	}
@@ -152,25 +113,105 @@ public class StateDecl implements Decl {
 	}
 
 	@Override
-	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars) {
+	public MemberRep generateHeader(PackageRep plaidpath, ImportList imports, String inPackage) {
+		StateRep toRet = new StateRep(name.getName()); 
+		Stack<State> worklist = new Stack<State>();
+		worklist.add(stateDef);
+		while(!worklist.isEmpty()) {
+			State s = worklist.pop();
+			if (s instanceof With) {
+				With w = (With) s;
+				worklist.add(w.getR1());
+				worklist.add(w.getR2());
+			} else if (s instanceof QI) {
+				String qid = ((QI) s).toString();
+				if (qid.contains(".")) { //explicit lookup - don't use the package or imports
+					if (plaidpath.memberExists(qid))
+						toRet.addNeed(qid);
+					else
+						throw new RuntimeException("Cannot resolve name " + qid + ".");
+				} else { //lookup first in package, then using imports
+					String need = checkPath(qid, plaidpath, imports, inPackage);
+					if (need != null) toRet.addNeed(need);
+				}
+			} else if (s instanceof DeclList) {
+				List<Decl> decls = ((DeclList) s).getDecls();
+				for (Decl d : decls) {
+					String name = d.getName();
+					if (d instanceof FieldDecl)
+						toRet.addMember(new FieldRep(name));
+					else if (d instanceof MethodDecl)
+						toRet.addMember(new MethodRep(name));
+					else if (d instanceof StateDecl)
+						toRet.addMember(new StateRep(name)); //TODO : nested states and their members
+					else
+						throw new RuntimeException("Type of Decl not accounted for.");
+				}
+			}
+		}
+		if (isCaseOf) {
+			String need = checkPath(caseOf.toString(), plaidpath, imports, inPackage);
+			if (need != null) toRet.addNeed(need);
+		}
+
+		return toRet;
+	}
+	
+	private String checkPath(String qid, PackageRep plaidpath, ImportList imports, String inPackage) {
+		String potentialNeed = inPackage + "." + qid;
+		if (plaidpath.memberExists(potentialNeed))
+			return potentialNeed;
+		else { //try imports
+			for (QualifiedID anImport : imports.getImports()) {
+				potentialNeed = anImport.toString();
+				//TODO : this will be a problem if you can compose with Java objects
+				if ((qid.contains(".") && potentialNeed.equals(qid)) || //either contains a dot and is equal to the whole import
+						potentialNeed.endsWith("." + qid)) {  //or is just the suffix (but must be the complete name)
+					if (plaidpath.memberExists(potentialNeed)) {
+						return potentialNeed;
+					} else
+						throw new RuntimeException("Name " + qid + "not found in the plaidpath.");
+				}
+			}
+		}
+		throw new RuntimeException("Name " + qid + " not declared or imported");
+	}
+	
+	@Override
+	public File codegenTopDecl(QualifiedID qid, ImportList imports, CompilerConfiguration cc, Set<ID> globalVars, PackageRep plaidpath) {
 
 		CodeGen out = new CodeGen(cc);	
 		ID freshImports = IdGen.getId();
 		ID theState = IdGen.getId();
+		String thePackage = qid.toString();
 		
 		//package and needed imports
-		out.declarePackage(qid.toString()); //package qid;
+		out.declarePackage(thePackage); //package qid;
 		
 		//determine what members this state has and add annotations
-		Set<ID> stateVars = new StateDeclHelper().genStateVars(qid, imports.getImports(), stateDef, caseOf);
-		
-		StringBuilder members = new StringBuilder();
-		for (ID member : stateVars) members.append(member.getName() + ",");
-		String memberString = members.toString();
-		if (memberString.length() > 0) memberString = memberString.substring(0,memberString.length()-1);
+		String repString = "";
+		Set<ID> stateVars = new HashSet<ID>();
+		if (plaidpath.memberExists(thePackage, name.getName())) {
+			MemberRep stateRep = plaidpath.lookupMember(thePackage, name.getName());
+			if (!(stateRep instanceof StateRep)) {
+				throw new RuntimeException(thePackage + "." + name.getName() + " is not a state.");
+			}
+			repString = MemberRep.escapeJSONString(stateRep.toJSONString());
+			for (MemberRep member : ((StateRep)stateRep).getMembers()) {
+				stateVars.add(new ID(member.getName()));
+			}
+		} else {
+			throw new RuntimeException("Cannot find state " + thePackage + "." + name.getName());
+		}
+//		Set<ID> stateVars = new StateDeclHelper().genStateVars(qid, imports.getImports(), stateDef, caseOf);
+//		
+//		StringBuilder members = new StringBuilder();
+//		for (ID member : stateVars) members.append(member.getName() + ",");
+//		String memberString = members.toString();
+//		if (memberString.length() > 0) memberString = memberString.substring(0,memberString.length()-1);
 		
 		// state annotation and class definition
-		out.stateAnnotation(name.getName(), true, memberString);
+		out.topStateAnnotation(name.getName(), thePackage, repString);
 		out.declarePublicClass(name.getName()); out.openBlock();  // public class f {
 		
 		//generate code to create the package scope with imports
@@ -179,7 +220,7 @@ public class StateDecl implements Decl {
 		out.declareGlobalScope(qid.toString(),freshImports.getName());
 
 		//annotation for the prototype object representing the state
-		out.stateAnnotation(name.getName(), false, "");
+		out.stateAnnotation(name.getName());
 		out.declarePublicStaticFinalVar(CodeGen.plaidObjectType, name.getName());
 		
 		out.openStaticBlock(); //static {
@@ -198,7 +239,7 @@ public class StateDecl implements Decl {
 			ID caseOfState = IdGen.getId();
 			ID declaredState = IdGen.getId();
 			out.declareFinalVar(CodeGen.plaidStateType, caseOfState.getName());
-			caseOf.codegenState(out, caseOfState, new IDList(), stateVars, null);
+			caseOf.codegenState(out, caseOfState, new IDList(), stateVars, CodeGen.anonymousDeclaration);
 			out.declareFinalVar(CodeGen.plaidStateType, declaredState.getName());
 			stateDef.codegenState(out, declaredState, idList, stateVars, qid.toString() + "." + name.getName());//this is this declaration.  It will not have any members, but at runtime can forward to its enclosing (instantiated) state
 			out.assignToWith(theState.getName(),caseOfState.getName(),declaredState.getName());  //y = fresh1.with(fresh2); 
@@ -222,8 +263,11 @@ public class StateDecl implements Decl {
 			out.openStaticBlock(); //static {	
 			ID caseOfState = IdGen.getId();
 			out.declareFinalVar(CodeGen.plaidStateType, caseOfState.getName());
-			caseOf.codegenState(out, caseOfState, new IDList(), stateVars, null);
+			caseOf.codegenState(out, caseOfState, new IDList(), stateVars, CodeGen.anonymousDeclaration);
 			out.assignToNewTag(tag.getName(), tagPath,  caseOfState.getName());  //tag = new PlaidTag(caseOfState)
+			
+			out.append(name.getName() + ".addTag(" + name.getName() + "$Tag" + PlaidConstants.ID_SUFFIX + ");");
+			out.updateVarDebugInfo(name.getName());
 			
 			out.closeBlock(); // } (for static block to init tag)
 		}
@@ -241,7 +285,7 @@ public class StateDecl implements Decl {
 		out.setLocation(token);
 		
 		ID fresh = IdGen.getId();
-		out.stateAnnotation(name.getName(), false, "");
+		out.stateAnnotation(name.getName()); //TODO : figure out how nested states work
 		out.declareFinalVar(CodeGen.plaidObjectType, fresh.getName());
 		stateDef.codegenState(out, fresh, localVars, stateVars, stateContext + "." + name.getName());  //TODO : stateContext here may not be right...
 
@@ -250,14 +294,14 @@ public class StateDecl implements Decl {
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		name.accept(visitor);
 		stateDef.accept(visitor);
 	}
 	
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 
 //	@Override
@@ -266,4 +310,12 @@ public class StateDecl implements Decl {
 //		// TODO Auto-generated method stub
 //		
 //	}
+	
+	@Override
+	public String toString() {
+		StringBuilder toRet= new StringBuilder();
+	
+		toRet.append("state " + name);
+		return toRet.toString();
+	}
 }

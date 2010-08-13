@@ -1,5 +1,8 @@
 package plaid.typechecker.AST;
 
+import java.lang.*;
+import java.util.*;
+
 state CompilationUnit case of ASTNode {
 	val /*List<Decl>*/ decls;
 	val /*List<String>*/ packageName;

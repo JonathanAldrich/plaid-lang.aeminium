@@ -5,6 +5,8 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/runtime"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/stdlib"/>
+	<classpathentry kind="lib" path="lib/servlet-api.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/compilerjava"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Aeminium"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

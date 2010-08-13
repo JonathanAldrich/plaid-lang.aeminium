@@ -79,7 +79,7 @@ public class ChangeState implements Expression {
 		//generate code for the new State
 		ID r = IdGen.getId();
 		out.declareFinalVar(CodeGen.plaidObjectType,r.getName());
-		st.codegenState(out, r, localVars, stateVars, "<Anonymous>");
+		st.codegenState(out, r, localVars, stateVars, CodeGen.anonymousDeclaration);
 
 		//cast to State
 		ID s = IdGen.getId();
@@ -103,13 +103,13 @@ public class ChangeState implements Expression {
 	}
 
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		e.accept(visitor);
 		st.accept(visitor);
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 }

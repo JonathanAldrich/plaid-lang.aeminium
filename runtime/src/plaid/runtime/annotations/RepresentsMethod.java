@@ -27,4 +27,10 @@ public @interface RepresentsMethod {
 	String name();
 	boolean toplevel() default false;
 	boolean readonly() default false; 
+	String inPackage() default "";
+	String returnType() default "dyn";
+	String[] argTypes() default {};
+	String[] varsChanged() default {};
+	String[] varStartState() default {};
+	String[] varEndState() default {};
 }

@@ -28,6 +28,8 @@ import plaid.compilerjava.AST.CompilationUnit;
 public class CompilerConfiguration {
 	private String outputDir = System.getProperty("user.dir");
 	private String inputDir = "";
+	private List<String> plaidpath = new ArrayList<String>();
+	
 	private boolean debugMode = false;
 	private List<File> inputFiles = new ArrayList<File>();
 	private boolean invokeCompiler = true;
@@ -35,6 +37,7 @@ public class CompilerConfiguration {
 	private boolean verbose = false;
 	private boolean copyright = false;
 	private boolean printCompilerStackTrace = true;
+	private boolean prettyPrint = false;
 	private CompilationUnit cu = null;
 	
 	public CompilerConfiguration() {}
@@ -42,12 +45,14 @@ public class CompilerConfiguration {
 	public CompilerConfiguration(CompilerConfiguration other, CompilationUnit cu) {
 		this.inputDir = other.inputDir;
 		this.outputDir = other.outputDir;
+		this.plaidpath = other.plaidpath;
 		this.debugMode = other.debugMode;
 		this.inputFiles = other.inputFiles;
 		this.invokeCompiler = other.invokeCompiler;
 		this.keepTemporaryFiles = other.keepTemporaryFiles;
 		this.verbose = other.verbose;
 		this.copyright = other.copyright;
+		this.prettyPrint = other.prettyPrint;
 		this.cu = cu;
 	}
 
@@ -131,4 +136,19 @@ public class CompilerConfiguration {
 		return this.printCompilerStackTrace;
 	}
 	
+	public List<String> getPlaidpath() {
+		return plaidpath;
+	}
+	
+	public void addToPlaidPath(String dir) {
+		plaidpath.add(dir);
+	}
+	
+	public boolean prettyPrint() {
+		return prettyPrint;
+	}
+	
+	public void setPrettyPrint(boolean prettyPrint) {
+		this.prettyPrint = prettyPrint;
+	}
 }

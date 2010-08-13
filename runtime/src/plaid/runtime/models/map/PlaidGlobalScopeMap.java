@@ -4,6 +4,7 @@ import java.util.*;
 
 import plaid.runtime.PlaidClassLoader;
 import plaid.runtime.PlaidClassNotFoundException;
+import plaid.runtime.PlaidConstants;
 import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.PlaidRuntimeException;
@@ -21,75 +22,91 @@ import plaid.runtime.utils.QualifiedIdentifier;
  *
  */
 public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
-	private final Set<Import> imports;
+	private static final Set<Import> javaImports = new HashSet<Import>();
+	private final Map<String, Import> importMap;
+	private final Object importsLock = new Object();
+
 	private final QualifiedIdentifier globalPackage;
 	
-	private static final Map<QualifiedIdentifier, PlaidGlobalScopeMap> 
-		globalScopes = new HashMap<QualifiedIdentifier, PlaidGlobalScopeMap>();
+	private static final Map<QualifiedIdentifier, PlaidGlobalScopeMap> globalScopes = new HashMap<QualifiedIdentifier, PlaidGlobalScopeMap>();
 
 	private PlaidGlobalScopeMap(String qi, List<Import> imports) {
-		super();
-		this.imports = new HashSet<Import>(imports);
-		addImport(new Import(qi + ".*"));
+		this.importMap = new HashMap<String, Import>();
+		this.addImports(imports);
 		this.globalPackage = new QualifiedIdentifier(qi);
 	}
 	
 	private void addImport(Import imp) {
-		synchronized (this.imports) {
-			this.imports.add(imp);
+		synchronized (importsLock) {
+			if (imp.isStar()) //java imports are the only starred imports, leave these for slow lookup
+				javaImports.add(imp);
+			else {
+				Import current = this.importMap.get(imp.getIdent().getSuffix());
+				if (current == null)
+					this.importMap.put(imp.getIdent().getSuffix(), imp);
+				else if (!current.equals(imp))
+					throw new PlaidRuntimeException("Import conflict: Symbol `" + current.getIdent().getSuffix() 
+						+ "' imported from packages `" + current.getIdent().getPrefix()
+						+ "' and `" + imp.getIdent().getPrefix() + "'.");
+			}
 		}
 	}
 	
 	private void addImports(Collection<Import> imports) {
-		synchronized (this.imports) {
-			this.imports.addAll(imports);
+		synchronized {
+			for (Import imp : imports)
+				this.addImport(imp);
 		}
 	}
 	
-	@Override
 	public PlaidObject lookup(String name) {
 		// check scope map
 		if (this.mutableScopeMap.containsKey(name))
 			return this.mutableScopeMap.get(name);
 		else if (this.immutableScopeMap.containsKey(name))
 			return this.immutableScopeMap.get(name);
-
-		synchronized (this.imports) {
-			for (Import imp : this.imports) {
+		
+		synchronized (importsLock) {
+			// TODO: Check if that's correct.
+			Import imp = importMap.get(name + PlaidConstants.ID_SUFFIX);
+			if (imp == null)
+				imp = importMap.get(name);
+			
+			if (imp != null) {
 				PlaidClassLoader cl = PlaidRuntime.getRuntime().getClassLoader();
-				if (imp.isStar()) {
-					QualifiedIdentifier nameQI = new QualifiedIdentifier(name);
-					QualifiedIdentifier fullQualName;
-					// if we specified a matching prefix too, use the full thing 
-					// to lookup
-					if (nameQI.getPrefix().equals(imp.getIdent().getPrefix())) {
-						fullQualName = nameQI;
-					}
-					else {
-						fullQualName = imp.getIdent().append(nameQI.getSuffix());
-					}
-					PlaidObject po = cl.loadClass(fullQualName.toString());
-					if (po != null) {
-						return po;
-					}
+				PlaidObject po = cl.loadClass(imp.getIdent().toString());
+				if (po != null) {
+					return po;
 				}
 				else {
-					if (imp.getIdent().getSuffix().equals(name)) {
-						PlaidObject po = cl.loadClass(imp.getIdent().toString());
-						if (po != null) {
-							return po;
-						}
-						else {
-							throw new PlaidClassNotFoundException(
-									"Cannot find class : "+imp.getIdent().toString());
-						}
-					} 
+					throw new PlaidClassNotFoundException(
+							"Cannot find class : " + imp.getIdent().toString());
 				}
 			}
+			
+			
+			// We currently can't expand Java imports like import java.util.*;
+			// So to keep everything working we fall back to our old (slower) system in that case.
+			for (Import im : javaImports) {
+				PlaidClassLoader cl = PlaidRuntime.getRuntime().getClassLoader();
+				QualifiedIdentifier nameQI = new QualifiedIdentifier(name);
+				QualifiedIdentifier fullQualName;
+				// If we specified a matching prefix too, use the full thing to lookup.
+				if (nameQI.getPrefix().equals(im.getIdent().getPrefix())) {
+					fullQualName = nameQI;
+				}
+				else {
+					fullQualName = im.getIdent().append(nameQI.getSuffix());
+				}
+				PlaidObject po = cl.loadClass(fullQualName.toString());
+				if (po != null) {
+					return po;
+				}
+			}
+			
+			// couldn't find anything, so return a lookup map so they can try again
+			return new PlaidLookupMap(this.globalPackage, new QualifiedIdentifier(name));
 		}
-
-		// couldn't find anything, so return a lookup map so they can try again
-		return new PlaidLookupMap(this.globalPackage, new QualifiedIdentifier(name));
 	}
 	
 	@Override
@@ -106,11 +123,11 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 	@Override
 	public void insert(String name, PlaidObject plaidObj, boolean immutable) {
 		if (this.immutableScopeMap.containsKey(name) || 
-				this.mutableScopeMap.containsKey(name)) {
+			this.mutableScopeMap.containsKey(name)) {
 			throw new PlaidRuntimeException("Cannot insert '" + name + 
-			"': already defined in current scope.");
+					"': already defined in current scope.");
 		}
-
+		
 		if (immutable) {
 			this.immutableScopeMap.put(name, plaidObj);
 		}
@@ -119,11 +136,10 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 		}
 	}
 	
-	@Override
 	public void update(String name, PlaidObject plaidObj) {
 		if (this.immutableScopeMap.containsKey(name)) {
 			throw new PlaidRuntimeException("Cannot assign to variables " +
-			"declared with \"val\".");
+											"declared with \"val\".");
 		}
 		else if (this.mutableScopeMap.containsKey(name)) {		
 			this.mutableScopeMap.put(name, plaidObj);
@@ -144,6 +160,7 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 		synchronized (globalScopes) {
 			QualifiedIdentifier qualID = new QualifiedIdentifier(qi);
 			PlaidGlobalScopeMap newGlobalScope;
+
 			if (globalScopes.containsKey(qualID)) {
 				newGlobalScope = globalScopes.get(qualID);
 				newGlobalScope.addImports(imports);
@@ -152,6 +169,7 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 				newGlobalScope = new PlaidGlobalScopeMap(qi, imports);
 				globalScopes.put(qualID, newGlobalScope);
 			}
+			
 			return newGlobalScope;
 		}
 	}
@@ -166,7 +184,8 @@ public final class PlaidGlobalScopeMap extends AbstractPlaidScopeMap {
 		}
 		else {
 			throw new PlaidUnboundVariableException("Variable does not " +
-			"exist in global scope.");
+					"exist in global scope.");
 		}
 	}
 }
+

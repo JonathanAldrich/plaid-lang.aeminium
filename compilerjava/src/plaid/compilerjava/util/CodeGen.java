@@ -20,10 +20,10 @@
 package plaid.compilerjava.util;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 import plaid.compilerjava.CompilerConfiguration;
-import plaid.compilerjava.AST.ID;
 import plaid.compilerjava.coreparser.Token;
 import plaid.runtime.PlaidConstants;
 
@@ -109,6 +109,7 @@ public class CodeGen {
 	//types for the runtime
 	public static final String plaidScopeType = runtimePackage + ".PlaidScope";
 	public static final String plaidObjectType = runtimePackage + ".PlaidObject";
+	public static final String plaidJavaObjectType = runtimePackage + ".PlaidJavaObject";
 	public static final String plaidStateType = runtimePackage + ".PlaidState";
 	public static final String plaidMethodType = runtimePackage + ".PlaidMethod";
 	public static final String plaidMemberDefType = runtimePackage + ".PlaidMemberDef";
@@ -117,7 +118,7 @@ public class CodeGen {
 	public static final String delegateType = utilsPackage + ".Delegate";
 	public static final String lambdaType = utilsPackage + ".Lambda";
 	
-
+	public static final String anonymousDeclaration = "<Anonymous>";
 
 	
 	public CodeGen(CompilerConfiguration cc) {
@@ -242,9 +243,14 @@ public class CodeGen {
 	}
 	
 	//Member Definition
-	public final void assignToNewMemberDef(String target, String varName, String definedIn, boolean mutable) {
+	public final void assignToNewMemberDef(String target, String varName, String definedIn, boolean mutable, boolean overrides) {
 		assign(target);
-		append(utilClass + ".memberDef(\"" + varName + "\", \"" + definedIn + "\", " + mutable + ");");
+		append(utilClass + ".memberDef(\"" + varName + "\", \"" + definedIn + "\", " + mutable + ", " + overrides + ");");
+	}
+	
+	public final void assignToAnonymousMemberDef(String target, String varName, boolean mutable, boolean overrides) {
+		assign(target);
+		append(utilClass + ".anonymousMemberDef(\"" + varName + "\", " + mutable + ", " + overrides + ");");
 	}
 	
 	public final void closeAnonymousDeclaration() {
@@ -279,6 +285,12 @@ public class CodeGen {
 	public final void assignToWith(String target, String s1, String s2) {
 		assign(target);
 		with(s1,s2);
+		updateVarDebugInfo(target);
+	}
+	
+	public final void assignToStateInitialization(String target, String toInit, String initState) {
+		assign(target);
+		output.append(toInit + ".initState(" + initState + ");");
 		updateVarDebugInfo(target);
 	}
 	
@@ -503,6 +515,12 @@ public class CodeGen {
 		output.append( classLoader + ".unit()");
 	}
 	
+	// Exists so that this method can be called from Plaid code,
+	// unit being a reserved word
+	public final void unit2() {
+		output.append (classLoader + ".unit()");
+	}
+	
 	public final void plaidString(String s) {
 		output.append(utilClass + ".string(\"" + s + "\")"); 
 	}
@@ -556,8 +574,15 @@ public class CodeGen {
 	 * @param toplevel
 	 * @return trailing @ sign to allow for correct indentation during pretty printing
 	 */
-	public final void methodAnnotation(String name, boolean toplevel) {
-		output.append("@plaid.runtime.annotations.RepresentsMethod(name = \"" + name + "\", toplevel = " + toplevel + ")@");
+	public final void topMethodAnnotation(String name, String thePackage) {
+
+		output.append("@plaid.runtime.annotations.RepresentsMethod(name = \"" + name + "\", inPackage = \"" + thePackage + "\", toplevel = " + true + ")");
+		if (cc.prettyPrint()) output.append("@");
+	}
+	
+	public final void methodAnnotation(String name) {
+		output.append("@plaid.runtime.annotations.RepresentsMethod(name = \"" + name + "\", toplevel = " + false + ")");
+		if (cc.prettyPrint()) output.append("@");
 	}
 	
 	/**
@@ -565,8 +590,14 @@ public class CodeGen {
 	 * @param toplevel
 	 * @return trailing @ sign to allow for correct indentation during pretty printing
 	 */
-	public final void fieldAnnotation(String name, boolean toplevel) {
-		output.append("@plaid.runtime.annotations.RepresentsField(name = \"" + name + "\", toplevel = " + toplevel + ")@");
+	public final void topFieldAnnotation(String name, String thePackage) {
+		output.append("@plaid.runtime.annotations.RepresentsField(name = \"" + name + "\", inPackage = \"" + thePackage + "\", toplevel = " + true + ")");
+		if (cc.prettyPrint()) output.append("@");
+	}
+	
+	public final void fieldAnnotation(String name) {
+		output.append("@plaid.runtime.annotations.RepresentsField(name = \"" + name + "\", toplevel = " + false + ")");
+		if (cc.prettyPrint()) output.append("@");
 	}
 	
 	/**
@@ -575,8 +606,14 @@ public class CodeGen {
 	 * @param members - comma separated list of member names
 	 * @return trailing @ sign to allow for correct indentation during pretty printing
 	 */
-	public final void stateAnnotation(String name, boolean toplevel, String members) {
-		output.append("@plaid.runtime.annotations.RepresentsState(name = \"" + name + "\", toplevel = " + toplevel + ", members = \"" + members + "\")@");
+	public final void topStateAnnotation(String name, String thePackage, String jsonRep) {
+		output.append("@plaid.runtime.annotations.RepresentsState(name = \"" + name + "\", inPackage = \"" + thePackage + "\", toplevel = " + true + ", jsonRep = \"" + jsonRep + "\")");
+		if (cc.prettyPrint()) output.append("@");
+	}
+	
+	public final void stateAnnotation(String name) {
+		output.append("@plaid.runtime.annotations.RepresentsState(name = \"" + name + "\", toplevel = " + false + ")");
+		if (cc.prettyPrint()) output.append("@");
 	}
 	
 	/**
@@ -584,7 +621,8 @@ public class CodeGen {
 	 * @return trailing @ sign to allow for correct indentation during pretty printing
 	 */
 	public final void tagAnnotation(String name) {
-		output.append("@plaid.runtime.annotations.RepresentsTag(name = \"" + name + "\")@");
+		output.append("@plaid.runtime.annotations.RepresentsTag(name = \"" + name + "\")");
+		if (cc.prettyPrint()) output.append("@");
 	}
 	
 	public final void setLocation(Token t ) {
@@ -618,50 +656,86 @@ public class CodeGen {
 	private int indent = 0;
 
 	public final String formatFile() {
+		if (!cc.prettyPrint()) return toString();
 		char current;
+		int copiedToIndex = 0;
+		boolean inAnnotation = false;
+		boolean inString = false;
+		StringBuilder formatted = new StringBuilder();
+		
 		
 		for (int i = 0; i < output.length(); i++) {
 			current = output.charAt(i);
-			if (current == ';') {
-				if (!(i < output.length() - 1 && output.charAt(i+1) == '}')) {
-					i = i + newLine(i+1);
-					i = i + indent(i+1);
+			if (inAnnotation) { //Annotations are special
+				if (current == '@') {
+					copiedToIndex = copyUpTo(i, copiedToIndex, output, formatted); //grab all but the last @
+					copiedToIndex++;  // skip the @ next time we copy
+					formatted.append(getNewLine());
+					formatted.append(getIndent());
+					inAnnotation = false;
 				}
+				//else wait for next @
+			} else if (inString) { //Strings are too
+				if (current =='"' && output.charAt(i-1) != '\\') { //non-escaped "
+					copiedToIndex = copyUpTo(i+1, copiedToIndex, output, formatted);
+					inString = false;
+				}
+			} else if (current == ';') {
+				copiedToIndex = copyUpTo(i+1, copiedToIndex, output, formatted);
+				formatted.append(getNewLine()); // new line
+				formatted.append(getIndent());
 			} else if (current == '{') {
-				i = i + newLine(i+1);
+				copiedToIndex = copyUpTo(i+1, copiedToIndex, output, formatted);
+				formatted.append(getNewLine());
 				indent++;
-				i = i + indent(i+1);
+				formatted.append(getIndent());
 			} else if (current == '}') {
 				indent--;
-				i = i + newLine(i);
-				i = i + indent(i);
-				if (i < output.length() - 1 && output.charAt(i+1) == ';') i++;  //}; should be atomic 
-				if (!(i < output.length() - 1 && output.charAt(i+1) == '}')) {
-					i = i + newLine(i+1);
-					i = i + indent(i+1);
+				formatted.append(getNewLine());
+				formatted.append(getIndent());
+				if (i < output.length() - 1 && output.charAt(i+1) == ';') { //}; should be atomic 
+					copiedToIndex = copyUpTo(i+2,copiedToIndex, output, formatted);
+					i++;
+				} else {
+					copiedToIndex = copyUpTo(i+1,copiedToIndex, output, formatted);
+					if (copiedToIndex != output.length()){
+						formatted.append(getNewLine());
+						formatted.append(getIndent());
+					}
 				}
 			} else if (current == '@') {
-				int search = i + 1;
-				while (output.charAt(search) != '@') search++;
-				i = search + indent(search + 1);
-				i = search + newLine(search + 1);
-				output.deleteCharAt(search);
-				i--; //reflect deleted character
+				inAnnotation = true;
+			} else if (current =='\"') {
+				inString = true;
 			}
-		}	
-		return output.toString();
+		}
+		if (copiedToIndex != output.length()) { //there was a problem...
+			String location = null;
+			if (inString) location = "String never ended";
+			else if (inAnnotation) location = "Annotation never ended";
+			else location = "Mismatched Braces";
+			
+			throw new RuntimeException("Bad formatting: " + location);
+		}
+		
+		return formatted.toString();
 	}
 	
-	//create a newline at the current indent
-	//returns the number of characters added
-	private final int indent(int index) {
-		for(int i = 0; i < indent; i++) output.insert(index,"\t");
-		return indent;	
+	private final String getIndent() {
+		String indentString = "";
+		for (int i = 0; i < indent; i++) indentString += "\t";
+		return indentString;
 	}
 	
-	private final int newLine(int index) {
-		output.insert(index, "\n");
-		return 1;
+	private final String getNewLine() {
+		 return "\n";
+	}
+	
+	private static final int copyUpTo(int copyUpTo, int copyFrom, StringBuilder from, StringBuilder to) {
+		to.append(from.substring(copyFrom, copyUpTo));
+		return copyUpTo;
+		
+		
 	}
 	
 	public final String toString() {
@@ -673,12 +747,13 @@ public class CodeGen {
 	 *----------------------------
 	 */
 	public static void main(String args[]) {
-		CodeGen test = new CodeGen(new CompilerConfiguration());
-		test.append("@annotation(test,true)@@annotation2(test,false)@Class A{int i;String z = \"test\";{i = 2;}}");
+		CompilerConfiguration cc = new CompilerConfiguration();
+		cc.setPrettyPrint(true);
+		CodeGen test = new CodeGen(cc);
+		test.append("@annotation(test,true)@@annotation2(test,false)@Class A{int i;String z = \"te\\\"st\";{i = 2;}}");
 		System.out.print(test.toString());
-		test.formatFile();
 		System.out.println("=>");
-		System.out.print(test.toString());
+		System.out.print(test.formatFile());
 	}
 
 

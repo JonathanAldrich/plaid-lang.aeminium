@@ -81,7 +81,7 @@ public class DeclList implements State {
 //			throw new PlaidException("Cannot have field and method with the same name.");
 //		}
 //	}
-
+	
 	// for state declarations
 	@Override
 	public void codegenState(CodeGen out, ID y, IDList localVars, Set<ID> stateVars, String stateContext) {
@@ -90,30 +90,27 @@ public class DeclList implements State {
 		
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
 		Set<String> declNames = new HashSet<String>();
-		boolean haveOwnerGroup = false;
+
 		for (Decl decl : decls) {
-			if (decl instanceof GroupDecl && (((GroupDecl) decl).isOwner())) {
-				if (haveOwnerGroup)
-					throw new PlaidException("Objects cannot be owned by more than one data group at a time.");
-				else
-					haveOwnerGroup = true;
+			String name = decl.getName();
+			if (declNames.contains(name)) {
+				throw new PlaidException("Cannot have two members defined with the name \"" + name + "\".");
+			} else { 
+				declNames.add(decl.getName());
+				decl.codegenNestedDecl(out, y, localVars, stateVars, stateContext);
 			}
-			declNames.add(decl.getName());
-			decl.codegenNestedDecl(out, y, localVars, stateVars, stateContext);
-		}
-		if (declNames.size() < decls.size()) {
-			throw new PlaidException("Cannot have equally named fields, methods or groups.");
 		}
 	}
 
+
 	@Override
-	public void visitChildren(ASTVisitor visitor) {
+	public <T> void visitChildren(ASTVisitor<T> visitor) {
 		for (Decl d : decls)
 			d.accept(visitor);
 	}
 
 	@Override
-	public void accept(ASTVisitor visitor) {
-		visitor.visitNode(this);
+	public <T> T accept(ASTVisitor<T> visitor) {
+		return visitor.visitNode(this);
 	}
 }
