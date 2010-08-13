@@ -47,12 +47,15 @@ import plaid.runtime.utils.Lambda;
 import plaid.runtime.utils.QualifiedIdentifier;
 
 public final class PlaidClassLoaderMap implements PlaidClassLoader {
-	protected PlaidRuntimeMap runtime;
-	protected HashMap<String, PlaidObject> singletons = new HashMap<String, PlaidObject>();
-	public final PlaidObject unit;
-	// TODO: Change to singleton
+	private PlaidRuntimeMap runtime;
+	private final HashMap<String, PlaidObject> singletons = new HashMap<String, PlaidObject>();
+	private final Object singletonsLock = new Object();
+	private final PlaidObject unit;
+
+	private static volatile PlaidClassLoaderMap loader = null;
+	private static Object loaderLock = new Object();
 	
-	public PlaidClassLoaderMap(PlaidRuntimeMap runtime) {
+	private PlaidClassLoaderMap(PlaidRuntimeMap runtime) {
 		this.runtime = runtime;
 		unit = loadClass("plaid.lang.Unit");
 		((PlaidObjectMap)unit).setReadOnly(false);
@@ -91,9 +94,8 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 			// check members 
 			Map<PlaidMemberDef,PlaidObject> members = pthis.getMembers();
 			for (PlaidMemberDef m : members.keySet()) {
-				if (name.equals(m.getMemberName())) {
+				if (name.equals(m.getMemberName()))
 					return members.get(m);
-				}
 			}
 			
 			for (PlaidObject os : pthis.getStates()) {
@@ -121,51 +123,58 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 		return currentScope.lookup(name);
 	}
 
-	protected PlaidObject lookup(PlaidLookupMap lookup) throws PlaidClassNotFoundException {
-		QualifiedIdentifier lookupAtTopLevel = lookup.getToLookup();
-		QualifiedIdentifier lookupInPackage = lookup.getThePackage().append(lookupAtTopLevel);
-		
-		// check if we have already looked up this QID in the package scope
-		if ( singletons.containsKey(lookupInPackage)) {
-			return singletons.get(lookupInPackage);
-		}
-		//check if we have already looked up this QID in the top level scope
-		if ( singletons.containsKey(lookupAtTopLevel.getQI())) {
-			return singletons.get(lookupAtTopLevel.getQI());
-		}
-		
-		//lookup the QID in the package scope
-		PlaidObject value = loadClass(lookupInPackage.toString());
-		if (value != null) return value; //found an actual declaration
-		
-		//lookup QID in the top level scope
-		PlaidObject topLevelValue = loadClass(lookupAtTopLevel.toString());
-		if (topLevelValue != null) return topLevelValue; //found an actual declaration
-		
-		//otherwise, we need to return this lookup context
-		return lookup;
-	}
-	
-	public PlaidObject loadClass(String name) throws PlaidClassNotFoundException {
-		if ( singletons.containsKey(name) )
-			return singletons.get(name);
-
-		// check if we can find the file 
-		ClassLoader cl = this.getClass().getClassLoader();
-	
-		String names[] = {name + PlaidConstants.ID_SUFFIX, name};
-		for ( String current : names) {
-			try {
-				@SuppressWarnings("unchecked")
-				Class<Object> obj = (Class<Object>) cl.loadClass(current);
-				return createPlaidObjectFromClass(new QualifiedIdentifier(current), obj);
-			} catch (ClassNotFoundException e) {
-				// If there is no classfile then we need to keep searching
+	private PlaidObject lookup(PlaidLookupMap lookup) throws PlaidClassNotFoundException {
+		synchronized (singletonsLock) {
+			QualifiedIdentifier lookupAtTopLevel = lookup.getToLookup();
+			QualifiedIdentifier lookupInPackage = lookup.getThePackage().append(lookupAtTopLevel);
+			
+			// check if we have already looked up this QID in the package scope
+			if ( singletons.containsKey(lookupInPackage)) {
+				return singletons.get(lookupInPackage);
 			}
+			//check if we have already looked up this QID in the top level scope
+			if ( singletons.containsKey(lookupAtTopLevel.getQI())) {
+				return singletons.get(lookupAtTopLevel.getQI());
+			}
+			
+			//lookup the QID in the package scope
+			PlaidObject value = loadClass(lookupInPackage.toString());
+			if (value != null) return value; //found an actual declaration
+			
+			//lookup QID in the top level scope
+			PlaidObject topLevelValue = loadClass(lookupAtTopLevel.toString());
+			if (topLevelValue != null) return topLevelValue; //found an actual declaration
+			
+			//otherwise, we need to return this lookup context
+			return lookup;
 		}
-		return null;
+	}
+	
+	@Override
+	public PlaidObject loadClass(String name) throws PlaidClassNotFoundException {
+		synchronized (singletonsLock) {
+			if ( singletons.containsKey(name) ) {
+				return singletons.get(name);
+			}
+			
+			// check if we can find the file 
+			ClassLoader cl = this.getClass().getClassLoader();
+		
+			String names[] = {name + PlaidConstants.ID_SUFFIX, name};
+			for ( String current : names) {
+				try {
+					@SuppressWarnings("unchecked")
+					Class<Object> obj = (Class<Object>) cl.loadClass(current);
+					return createPlaidObjectFromClass(new QualifiedIdentifier(current), obj);
+				} catch (ClassNotFoundException e) {
+					// If there is no classfile then we need to keep searching
+				}
+			}
+			return null;
+		}
 	}
 
+	@Override
 	public PlaidJavaObject packJavaObject(Object o) throws PlaidException {
 		return new PlaidJavaObjectMap(o);
 	}
@@ -207,7 +216,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	 * 
 	 ***************************************************************************/
 	
-	protected PlaidObject createPlaidObjectFromClass(QualifiedIdentifier qi, Class<Object> objClass) throws PlaidException {
+	private PlaidObject createPlaidObjectFromClass(QualifiedIdentifier qi, Class<Object> objClass) throws PlaidException {
 		if (  objClass.getAnnotation(RepresentsState.class) != null ) {
 			RepresentsState psa = objClass.getAnnotation(RepresentsState.class);
 			return createTopLevelPlaidStateFromClass(qi, psa, objClass);
@@ -218,72 +227,76 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 			RepresentsMethod pma = objClass.getAnnotation(RepresentsMethod.class); 
 			return createTopLevelPlaidMethodFromClass(qi, pma, objClass);
 		} else {
-			// must be a normal Java class -> generate a JavaObject
-			PlaidJavaStateMap javaState = new PlaidJavaStateMap(objClass, objClass);
-			javaState.setReadOnly(true);
-			singletons.put(qi.getQI(), javaState);
-			return javaState;
+			synchronized (singletonsLock) {
+				// must be a normal Java class -> generate a JavaObject
+				PlaidJavaStateMap javaState = new PlaidJavaStateMap(objClass, objClass);
+				javaState.setReadOnly(true);
+				singletons.put(qi.getQI(), javaState);
+				return javaState;
+			}
 		}
 	}
 
-	protected PlaidObject createTopLevelPlaidStateFromClass(QualifiedIdentifier qi, 
+	private PlaidObject createTopLevelPlaidStateFromClass(QualifiedIdentifier qi, 
 															RepresentsState psa, 
 															Class<Object> objClass) throws PlaidException {
-
-		PlaidPackageMap pkg = new PlaidPackageMap(qi.getPrefix());
-		String name = (qi.getSuffix().endsWith(PlaidConstants.ID_SUFFIX))?qi.getSuffix().substring(0, qi.getSuffix().length()-PlaidConstants.ID_SUFFIX.length()):qi.getSuffix();
-		PlaidStateMap psm = new PlaidStateMap(pkg, name, objClass);
-
-		// states are always singletons
-		singletons.put(qi.getPrefix().append(psa.name()).toString(), psm);
-		// states are always immutable 
-		//psm.setReadOnly(true);
-		return psm;
+		synchronized (singletonsLock) {
+			PlaidPackageMap pkg = new PlaidPackageMap(qi.getPrefix());
+			String name = (qi.getSuffix().endsWith(PlaidConstants.ID_SUFFIX))?qi.getSuffix().substring(0, qi.getSuffix().length()-PlaidConstants.ID_SUFFIX.length()):qi.getSuffix();
+			PlaidStateMap psm = new PlaidStateMap(pkg, name, objClass);
+	
+			// states are always singletons
+			singletons.put(qi.getPrefix().append(psa.name()).toString(), psm);
+			// states are always immutable 
+			//psm.setReadOnly(true);
+			return psm;
+		}
 	}
 
-	protected PlaidObject createTopLevelPlaidMethodFromClass(QualifiedIdentifier qi,
+	private PlaidObject createTopLevelPlaidMethodFromClass(QualifiedIdentifier qi,
 															 RepresentsMethod pma, 
 															 Class<Object> objClass) throws PlaidException {
-		
-		for ( Field f : objClass.getFields() ) {			
-			RepresentsMethod ma = f.getAnnotation(RepresentsMethod.class);
-			if ( ma != null && ma.name().endsWith(pma.name()) && f.getType().isAssignableFrom(PlaidMethod.class) ) {
-				try {					
-					PlaidMethod v = (PlaidMethod) f.get(objClass);
-					singletons.put(qi.getQI(), v);
-					if ( v instanceof PlaidFunctionMap ) {
-						((PlaidFunctionMap)v).setName(qi.getQI());
+		synchronized (singletonsLock) {
+			for ( Field f : objClass.getFields() ) {			
+				RepresentsMethod ma = f.getAnnotation(RepresentsMethod.class);
+				if ( ma != null && ma.name().endsWith(pma.name()) && f.getType().isAssignableFrom(PlaidMethod.class) ) {
+					try {
+						PlaidMethod v = (PlaidMethod) f.get(objClass);
+						singletons.put(qi.getQI(), v);
+						if ( v instanceof PlaidFunctionMap ) {
+							((PlaidFunctionMap)v).setName(qi.getQI());
+						}
+						return v;
+					} catch (IllegalArgumentException e) {
+						throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
+					} catch (IllegalAccessException e) {
+						throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 					}
-					return v;
-				} catch (IllegalArgumentException e) {
-					throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
-				} catch (IllegalAccessException e) {
-					throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 				}
 			}
+			throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 		}
-		throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 	}
 
-	protected PlaidObject createTopLevelPlaidFieldFromClass(QualifiedIdentifier qi,
+	private PlaidObject createTopLevelPlaidFieldFromClass(QualifiedIdentifier qi,
 															RepresentsField pfa, 
 															Class<Object> objClass) throws PlaidException {
-		
-		for ( Field f : objClass.getFields() ) {
-			if ( f.getName().equals(qi.getSuffix()) & f.getType().isAssignableFrom(PlaidMethod.class) ) {
-				
-				try {					
-					PlaidObject v = (PlaidObject) f.get(objClass);
-					singletons.put(qi.getQI(), v);
-					return v;
-				} catch (IllegalArgumentException e) {
-					throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
-				} catch (IllegalAccessException e) {
-					throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
+		synchronized (singletonsLock) {
+			for ( Field f : objClass.getFields() ) {
+				if ( f.getName().equals(qi.getSuffix()) & f.getType().isAssignableFrom(PlaidMethod.class) ) {
+					try {
+						PlaidObject v = (PlaidObject) f.get(objClass);
+						singletons.put(qi.getQI(), v);
+						return v;
+					} catch (IllegalArgumentException e) {
+						throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
+					} catch (IllegalAccessException e) {
+						throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
+					}
 				}
 			}
+			throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 		}
-		throw new PlaidIllegalAccessException("Cannot find " + qi.getQI());
 	}
 
 	@Override
@@ -299,5 +312,17 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	@Override
 	public PlaidMemberDef memberDef(String memberName, boolean anonymous, String definedIn, boolean mutable, boolean overrides) {
 		return new PlaidMemberDefMap(memberName, anonymous, definedIn, mutable, overrides);
+	}
+	
+	public static PlaidClassLoaderMap getClassLoader() {
+		// Double-checked locking is safe because loader is declared volatile
+		if (loader == null) {
+			synchronized (loaderLock) {
+				if (loader == null)
+					loader = new PlaidClassLoaderMap();
+			}
+		}
+		
+		return loader;
 	}
 }
