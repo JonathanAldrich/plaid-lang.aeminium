@@ -4,8 +4,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 class Variable {
 	public enum Permission {
@@ -20,38 +22,40 @@ class Variable {
 		}
 	}
 	
-	private Permission permission;
-	private String name;
+	private final Permission permission;
+	private final String name;
 	
 	public Variable(Permission perm, String name) {
 		this.permission = perm;
 		this.name = name;
 	}
 	
+	@Override
 	public String toString() {
 		return (this.permission == Permission.UNIQUE ? "U" : "I") + "." + this.name;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (!(o instanceof Variable))
+			return false;
+		
+		Variable ov = (Variable) o;
+		return this.name.equals(ov.getName()) && this.permission == ov.getPermission();
 	}
 
 	public Permission getPermission() {
 		return permission;
 	}
 
-	public void setPermission(Permission permission) {
-		this.permission = permission;
-	}
-
 	public String getName() {
 		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 }
 
 class Node {
-	private List<Variable> vars = new ArrayList<Variable>();
-	private int num;
+	private final List<Variable> vars = new ArrayList<Variable>();
+	private final int num;
 	
 	public Node(String s, int num) {
 		System.out.println("Node " + num + ": " + s);
@@ -68,16 +72,52 @@ class Node {
 		return vars;
 	}
 
-	public void setVars(List<Variable> vars) {
-		this.vars = vars;
-	}
-
 	public int getNum() {
 		return num;
 	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (!(o instanceof Node))
+			return false;
+		
+		Node on = (Node) o;
+		return this.num == on.num;
+	}
+}
 
-	public void setNum(int num) {
-		this.num = num;
+class Dependency {
+	private final Node from;
+	private final Node to;
+	private final Variable variable;
+	
+	public Dependency(Node from, Node to, Variable variable) {
+		this.from = from;
+		this.to = to;
+		this.variable = variable;
+	}
+
+	public Node getFrom() {
+		return from;
+	}
+
+	public Node getTo() {
+		return to;
+	}
+
+	public Variable getVariable() {
+		return variable;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (!(o instanceof Dependency))
+			return false;
+		
+		Dependency od = (Dependency) o;
+		return this.from.equals(od.getFrom())
+		       && this.to.equals(od.getTo())
+		       && this.variable.equals(od.getVariable());
 	}
 }
 
@@ -85,8 +125,10 @@ public class DependencyTest {
 	public static List<Node> buildExample() {
 		ArrayList<Node> nodes = new ArrayList<Node>();
 		
-		String example = "U.x,U.y;U.x;I.x;I.x;I.x,I.y;U.x;I.y;U.x,U.y";
+//		String example = "U.x,U.y;U.x;I.x;I.x;I.x,I.y;U.x;I.y;U.x,U.y";
 //		String example = "U.x;I.x;I.x;U.x";
+		String example = "U.x,I.y;U.a;I.b;U.x,I.a;I.a,I.b;U.a,U.b";
+//		String example = "U.to,U.from,I.amount;U.to,I.amount;U.from,I.amount;U.to,U.from,I.amount";
 		
 		int num = 1;
 		for (String n : example.split(";")) {
@@ -96,46 +138,63 @@ public class DependencyTest {
 		return nodes;
 	}
 	
+	
 	public static void searchDependencies(List<Node> nodes) {
-		Map<String, List<Node>> readLookup = new HashMap<String, List<Node>>();
-		Map<String, Node> writeLookup = new HashMap<String, Node>();
-		
-		StringBuilder s = new StringBuilder();
-		
-		s.append("digraph G {\n\trankdir=RL;\n\n");
+		Map<String, Set<Node>> readers = new HashMap<String, Set<Node>>();
+		Map<String, Node> writer = new HashMap<String, Node>();
+		StringBuilder s = new StringBuilder("digraph G {\n\trankdir=RL;\n\n");
 		
 		for (Node node : nodes) {
-			List<Node> myDeps = new ArrayList<Node>();
+			Set<Dependency> myDeps = new HashSet<Dependency>();
 			
 			for (Variable v : node.getVars()) {
 				if (v.getPermission() == Variable.Permission.IMMUTABLE) {
-					Node n = writeLookup.get(v.getName());
-					myDeps.add(n);
-					
-					if (readLookup.get(v.getName()) == null)
-						readLookup.put(v.getName(), new ArrayList<Node>());
-					List<Node> l = readLookup.get(v.getName());
-					l.add(node);
-				}
-				else { /* UNIQUE */
-					List<Node> l = readLookup.get(v.getName());
-					if (l != null)
-						myDeps.addAll(l);
-					else {
-						Node n = writeLookup.get(v.getName());
-						if (n != null)
-							myDeps.add(n);
+					// Check if someone had write access to this variable before
+					Node w = writer.get(v.getName());
+					if (w != null) {
+						// Yes, so we have to depend on that node
+						myDeps.add(new Dependency(node, w, v));
 					}
 					
-					writeLookup.put(v.getName(), node);					
-					readLookup.put(v.getName(), null);
+					// Get the set of reader nodes of that variable
+					Set<Node> r = readers.get(v.getName());
+					
+					// If r is null, we are the first node referencing this variable at all
+					// or the first node after a write access.
+					if (r == null)
+						r = new HashSet<Node>();
+					r.add(node);
+					readers.put(v.getName(), r);
+				}
+				else if (v.getPermission() == Variable.Permission.UNIQUE) {
+					Set<Node> r = readers.get(v.getName());
+					// We depend on all previous readers of that variable (if there are any)
+					if (r != null) {
+						for (Node n : r)
+							myDeps.add(new Dependency(node, n, v));
+					}
+					else {
+						// If there are no previous reads, there might still be a write.
+						// We only want to depend on the write if there haven't been any reads in the meantime.
+						Node w = writer.get(v.getName());
+						if (w != null)
+							myDeps.add(new Dependency(node, w, v));
+					}
+					
+					// In any case, we are now the last write to that variable.
+					writer.put(v.getName(), node);
+					// Also, we clear the list of readers to that variable.
+					readers.put(v.getName(), null);
 				}
 			}
 			
-			for (Node n : myDeps) {
-				s.append("\t" + node.getNum() + " -> " + n.getNum() + ";");
-//				s.append("[label=\"" + ";\n");
-			}
+			// We've collected all our dependencies now (can be empty)
+			s.append("\t" + node.getNum() + " [ label=\"" + node.getNum() + ": ");
+			for (Variable var : node.getVars())
+				s.append(var + " ");
+			s.append("\" ];\n");
+			for (Dependency dep : myDeps)
+				s.append("\t" + node.getNum() + " -> " + dep.getTo().getNum() + " [ label=\"" + dep.getVariable().getName() + "\" ];\n");
 		}
 		
 		s.append("}\n");
