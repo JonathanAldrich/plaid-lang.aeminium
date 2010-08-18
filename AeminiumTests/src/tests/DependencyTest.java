@@ -125,13 +125,16 @@ public class DependencyTest {
 	public static List<Node> buildExample() {
 		ArrayList<Node> nodes = new ArrayList<Node>();
 		
-//		String example = "U.x,U.y;U.x;I.x;I.x;I.x,I.y;U.x;I.y;U.x,U.y";
-//		String example = "U.x;I.x;I.x;U.x";
-		String example = "U.x,I.y;U.a;I.b;U.x,I.a;I.a,I.b;U.a,U.b";
-//		String example = "U.to,U.from,I.amount;U.to,I.amount;U.from,I.amount;U.to,U.from,I.amount";
+//		String example = "U.x,U.y; U.x; I.x; I.x; I.x,I.y; U.x; I.y; U.x,U.y";
+//		String example = "U.x; I.x; I.x; U.x";
+		String example = "U.x,I.y; U.a; I.b; U.x,I.a; I.z; I.a,I.b; U.a,U.b; I.y; U.x,U.y";
+//		String example = "U.to,U.from,I.amount ; U.to,I.amount ; U.from,I.amount ; U.to,U.from,I.amount";
+//		String example = "I.a; I.b; I.c; I.d; I.e; U.a,U.b,U.c,U.d,U.e; I.f; U.e,U.f";
 		
+//		String example = "U.x_1 ; U.x_2 ; U.x_3, I.x_1, I.x_2 ; I.x_1, I.x_2 ";
+
 		int num = 1;
-		for (String n : example.split(";")) {
+		for (String n : example.replace(" ", "").split(";")) {
 			nodes.add(new Node(n, num++));
 		}
 		
