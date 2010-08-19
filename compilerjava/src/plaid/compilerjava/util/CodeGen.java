@@ -77,7 +77,7 @@ public class CodeGen {
 	public static final String runtimePackage = "plaid.runtime";
 	public static final String classLoader = runtimePackage + ".PlaidRuntime.getRuntime().getClassLoader()";
 	public static final String rt = runtimePackage + ".PlaidRuntime.getRuntime()";
-	public static final String aemRt = runtimePackage + ".PlaidRuntime.getAeminium()";
+	public static final String aemRt = "aeminium.runtime.implementations.Factory.getRuntime()";
 	public static final String globalScope = "global$c0pe";
 	public static final String localScope = "local$c0pe";
 	public static final String utilClass = runtimePackage + ".Util";
