@@ -141,10 +141,25 @@ state PrintVisitor case of ASTVisitor {
 	method visitMethodDecl(node) {
 		this.output("MethodDecl(" + node.name + ")");
 		this.inc();
+		node.methodType.accept(this);
+		node.arg.accept(this);
 		node.body.accept(this);
 		if (!node.arg.isNull()) {
 			node.arg.accept(this);
 		};
+		this.dec();
+	}
+	
+	method visitMethodTypeDecl(node) {
+		this.output("MethodTypeDecl(" + node.name + ")");
+		this.inc();
+		node.retPermType.accept(this);
+		node.argTypes.map(fn (argType) => {
+			argType.accept(this)
+		});
+		node.argNames.map(fn (argName) => {
+			argName.accept(this)
+		});
 		this.dec();
 	}
 	
@@ -167,6 +182,10 @@ state PrintVisitor case of ASTVisitor {
 	
 	method visitNullNode(node) {
 		this.output("NULL");
+	}
+	
+	method visitPermType(node) {
+		this.output("PermType");
 	}
 	
 	method visitQI(node) {

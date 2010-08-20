@@ -46,3 +46,11 @@ var ifElse = fn (bool) => {
 
 var while = fn (cond) => fn (body) => (new While {val condition = cond; val whileBody = body; }).whileLoop();
 
+method javaListToPlaidList(list) {
+	val iter = list.iterator();
+	val newList = new plaid.lang.List with { var head = new plaid.lang.Nil; };
+	while {iter.hasNext();} {
+		newList.prepend(iter.next());
+	};
+	newList
+}
