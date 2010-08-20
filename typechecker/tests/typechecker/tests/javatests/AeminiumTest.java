@@ -21,27 +21,47 @@ public class AeminiumTest {
 		PlaidRuntime.getRuntime().setRuntimeState(RUNTIME_STATE.RUNNING);
 	}
 	
+	private enum Perm {
+		UNIQUE,
+		IMMUTABLE
+	}
+	
+	final PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
+	final PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
+	// TODO: Why is this broken?
+	// final PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
+	final PlaidObject intType = TestUtils.type(new PlaidObject[] { TestUtils.id("Integer") }, new PlaidObject[0]);
+	final PlaidObject immutableInt = TestUtils.permtype(TestUtils.immutable(), intType);
+	final PlaidObject uniqueInt = TestUtils.permtype(TestUtils.unique(), intType);
+	
+	
+	
+	private PlaidObject makeApplication(String function, String arg, Perm perm) {
+		PlaidObject foo = TestUtils.id(function, dummyPermType);
+		
+		PlaidObject permType;
+		if (perm == Perm.UNIQUE)
+			permType = uniqueInt;
+		else
+			permType = immutableInt;
+		
+		PlaidObject x = TestUtils.id(arg, permType);
+		return TestUtils.application(foo, x);
+	}
+	
 	@Test
 	public void codeGenTest() {
-		PlaidObject letVar = TestUtils.id("var$plaid");
+		final PlaidObject x = TestUtils.id("x", immutableInt);
+		PlaidObject letVar = TestUtils.id("var$plaid", dummyPermType);
 		
-		PlaidObject foo = TestUtils.id("foo");
-		PlaidObject x = TestUtils.id("x");
-		PlaidObject firstApp = TestUtils.application(foo, x);
-		
-		PlaidObject bar = TestUtils.id("bar");
-		PlaidObject secondApp = TestUtils.application(bar, x);
+		PlaidObject firstApp = makeApplication("foo", "x", Perm.IMMUTABLE);
+		PlaidObject secondApp = makeApplication("bar", "x", Perm.IMMUTABLE);
 		
 		PlaidObject let = TestUtils.let(letVar, firstApp, secondApp);
 		
-		PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
-		PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
-		
-		PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
-		PlaidObject immInt = TestUtils.permtype(TestUtils.immutable(), intType);
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
-		argTypes.add(immInt);
+		argTypes.add(immutableInt);
 		
 		List<PlaidObject> argNames = new ArrayList<PlaidObject>();
 		argNames.add(x);

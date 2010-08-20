@@ -127,6 +127,27 @@ public class TestUtils {
 		// instantiate the new prototype
 		return initAndInstantiateState(ID.ID, newState);
 	}
+
+	/**
+	 * Constructs a new ID using the given name and permtype.
+	 * 
+	 * @param name The name of the ID.
+	 * @param permType The permtype.
+	 * @return The newly created ID AST node.
+	 */
+	public static PlaidObject id(final String name, final PlaidObject permType) {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+		
+		// add the necessary members to the new prototype
+		newState.addMember(Util.anonymousMemberDef("name", false, false), 
+				protoField(Util.string(name)));
+		newState.addMember(Util.anonymousMemberDef("permType", false, false),
+				protoField(permType));
+		
+		// instantiate the new prototype
+		return initAndInstantiateState(ID.ID, newState);
+	}
 	
 	/**
 	 * Constructs a new IntLiteral given an integer value.
