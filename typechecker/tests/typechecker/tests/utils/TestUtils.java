@@ -10,6 +10,8 @@ import java.util.Set;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
+import com.sun.org.apache.xml.internal.serializer.utils.Utils;
+
 import plaid.compilerjava.AST.Permission;
 import plaid.compilerjava.AST.TypeDecl;
 import plaid.compilerjava.util.FieldRep;
@@ -29,12 +31,15 @@ import plaid.runtime.models.map.PlaidStateMap;
 import plaid.runtime.utils.Delegate;
 import plaid.runtime.utils.QualifiedIdentifier;
 import plaid.runtime.annotations.RepresentsState;
+import plaid.typechecker.AST.ASTTranslator;
+import plaid.typechecker.AST.Application;
 import plaid.typechecker.AST.DynPermType;
 import plaid.typechecker.AST.FieldTypeDecl;
 import plaid.typechecker.AST.FullPermission;
 import plaid.typechecker.AST.ID;
 import plaid.typechecker.AST.ImmutablePermission;
 import plaid.typechecker.AST.IntLiteral;
+import plaid.typechecker.AST.MethodDecl;
 import plaid.typechecker.AST.MethodTypeDecl;
 import plaid.typechecker.AST.NonePermission;
 import plaid.typechecker.AST.PermType;
@@ -43,6 +48,7 @@ import plaid.typechecker.AST.SharedPermission;
 import plaid.typechecker.AST.Type;
 import plaid.typechecker.AST.UnannotatedLetBinding;
 import plaid.typechecker.AST.UniquePermission;
+import plaid.typechecker.AST.visitor.PrintVisitor;
 import plaid.typechecker.AST.visitor.TypecheckerVisitor;
 import plaid.typechecker.AST.visitor.helper.Context;
 
@@ -55,6 +61,26 @@ import plaid.typechecker.AST.visitor.helper.Context;
  *
  */
 public class TestUtils {
+	public static PlaidObject convertJavaListToPlaidList(List<PlaidObject> javaList) {
+		PlaidMethod convertMethod = Util.toPlaidMethod(Util.lookup("plaid.lang.globals.javaListToPlaidList", Util.unit()));
+		return convertMethod.invoke(new PlaidJavaObjectMap(javaList));
+	}
+	
+	/**
+	 * Constructs a new Application node using the given function and argument.
+	 * 
+	 * @param f TODO
+	 * @param arg TODO
+	 * @return The newly created Application AST node.
+	 */
+	public static PlaidObject application(final PlaidObject f, final PlaidObject arg) {
+		PlaidState newState = Util.newState();
+		newState.addMember(Util.anonymousMemberDef("f", false, false), protoField(f));
+		newState.addMember(Util.anonymousMemberDef("arg", false, false), protoField(arg));
+		
+		return initAndInstantiateState(Application.Application, newState);
+	}
+	
 	/**
 	 * Constructs a new UnannotatedLetBinding using the given variable, 
 	 * expression, and body.
@@ -135,6 +161,16 @@ public class TestUtils {
 		// instantiate the new prototype
 		return initAndInstantiateState(TypecheckerVisitor.TypecheckerVisitor, newState);
 	}
+
+	/**
+	 * Constructs a new PrintVisitor to output a Plaid AST.
+	 * 
+	 * @return The newly created PrintVisitor.
+	 */
+	public static PlaidObject printVisitor() {
+		PlaidState newState = Util.newState();
+		return initAndInstantiateState(PrintVisitor.PrintVisitor, newState);
+	}
 	
 	/**
 	 * Constructs a new Context object to use for typechecking tests.
@@ -203,15 +239,50 @@ public class TestUtils {
 	}
 	
 	/**
+	 * TODO
+	 * @param name
+	 * @param body
+	 * @param arg
+	 * @param abstractMethod
+	 * @üaram methodType
+	 * @return
+	 */
+	public static PlaidObject methodDecl(PlaidObject name,
+									 PlaidObject body,
+									 PlaidObject arg,
+									 PlaidObject abstractMethod,
+									 PlaidObject methodType) {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+		
+		// add the necessary members to the new prototype
+		newState.addMember(Util.anonymousMemberDef("name", false, false), 
+				protoField(name));
+		newState.addMember(Util.anonymousMemberDef("body", false, false), 
+				protoField(body));
+		newState.addMember(Util.anonymousMemberDef("arg", false, false), 
+				protoField(arg));
+		newState.addMember(Util.anonymousMemberDef("abstractMethod", false, false), 
+				protoField(abstractMethod));
+		newState.addMember(Util.anonymousMemberDef("methodType", false, false), 
+				protoField(methodType));
+
+		// instantiate the new prototype
+		return initAndInstantiateState(MethodDecl.MethodDecl, newState);	
+	}
+	
+	/**
 	 * TODO: add type change information
 	 * @param name
 	 * @param retPermType
 	 * @param argTypes
+	 * @param argNames
 	 * @return
 	 */
-	public static PlaidObject methodType(PlaidObject name, 
+	public static PlaidObject methodType(PlaidObject name,
 										 PlaidObject retPermType, 
-										 PlaidObject argTypes) {
+										 PlaidObject argTypes,
+										 PlaidObject argNames) {
 		// create a new blank prototype
 		PlaidState newState = Util.newState();
 		
@@ -222,6 +293,8 @@ public class TestUtils {
 				protoField(retPermType));
 		newState.addMember(Util.anonymousMemberDef("argTypes", false, false), 
 				protoField(argTypes));
+		newState.addMember(Util.anonymousMemberDef("argNames", false, false), 
+				protoField(argNames));
 		
 		// instantiate the new prototype
 		return initAndInstantiateState(MethodTypeDecl.MethodTypeDecl, newState);
@@ -547,7 +620,8 @@ public class TestUtils {
 		
 		return TestUtils.methodType(TestUtils.id(name), 
 									TestUtils.javaPermTypeToPlaidPermType(retType), 
-									new PlaidJavaObjectMap(plaidPermTypes));
+									new PlaidJavaObjectMap(plaidPermTypes),
+									new PlaidJavaObjectMap(new ArrayList<PlaidObject>())); // TODO: Fix
 	}
 	
 	private static PlaidObject fieldType(plaid.compilerjava.AST.FieldTypeDecl decl) {
@@ -572,7 +646,8 @@ public class TestUtils {
 			
 			return TestUtils.methodType(TestUtils.id(methodRep.getName()), 
 								 TestUtils.javaPermTypeToPlaidPermType(retType), 
-								 new PlaidJavaObjectMap(plaidArgTypes));
+								 new PlaidJavaObjectMap(plaidArgTypes),
+								 new PlaidJavaObjectMap(new ArrayList<PlaidObject>())); // TODO: Fix
 		}
 		else if (rep instanceof FieldRep) {
 			FieldRep fieldRep = (FieldRep)rep;
