@@ -1,5 +1,7 @@
 package plaid.typechecker.AST.visitor;
 
+import plaid.typechecker.AST.*;
+
 state PrintVisitor case of ASTVisitor {
 	var indent = 0;
 	
@@ -101,6 +103,9 @@ state PrintVisitor case of ASTVisitor {
 	
 	method visitID(node) {
 		this.output("ID(" + node.name + ")");
+		this.inc();
+		node.permType.accept(this);
+		this.dec();
 	}
 	
 	method visitImportList(node) {
@@ -186,6 +191,29 @@ state PrintVisitor case of ASTVisitor {
 	
 	method visitPermType(node) {
 		this.output("PermType");
+		
+		this.inc();
+		// TODO: Do proper dispatch
+		match (node.perm) {
+			case ImmutablePermission {
+				output("immutable");
+			}
+			case UniquePermission {
+				output("unique");
+			}
+		};
+		
+		ifElse (node.type.typeAbbrevs.isEmpty()) {
+			output("<unknown>");
+		} {
+			val it = node.type.typeAbbrevs.iterator();
+			
+			while { it.hasNext(); } {
+				output(it.next().name);
+			};
+		};
+		
+		this.dec();
 	}
 	
 	method visitQI(node) {
