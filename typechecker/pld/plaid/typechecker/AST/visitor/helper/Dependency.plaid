@@ -1,0 +1,20 @@
+package plaid.typechecker.AST.visitor.helper;
+
+state Dependency {
+	val /*AeminiumNode*/ from;
+	val /*AeminiumNode*/ to;
+	val /*ID*/ variable;
+	
+	method equals(other) {
+		match (other) {
+			case Dependency {
+				this.from.equals(other.from)
+				&& this.to.equals(other.to)
+				&& this.variable.equals(other.variable);
+			}
+			default {
+				false;
+			}
+		};
+	}
+}
