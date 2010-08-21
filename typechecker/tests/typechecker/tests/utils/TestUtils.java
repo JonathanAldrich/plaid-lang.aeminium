@@ -48,6 +48,7 @@ import plaid.typechecker.AST.SharedPermission;
 import plaid.typechecker.AST.Type;
 import plaid.typechecker.AST.UnannotatedLetBinding;
 import plaid.typechecker.AST.UniquePermission;
+import plaid.typechecker.AST.visitor.DependencyVisitor;
 import plaid.typechecker.AST.visitor.PrintVisitor;
 import plaid.typechecker.AST.visitor.TypecheckerVisitor;
 import plaid.typechecker.AST.visitor.helper.Context;
@@ -191,6 +192,16 @@ public class TestUtils {
 	public static PlaidObject printVisitor() {
 		PlaidState newState = Util.newState();
 		return initAndInstantiateState(PrintVisitor.PrintVisitor, newState);
+	}
+	
+	/**
+	 * Constructs a new DependencyVisitor to output a Plaid AST.
+	 * 
+	 * @return The newly created DependencyVisitor.
+	 */
+	public static PlaidObject dependencyVisitor() {
+		PlaidState newState = Util.newState();
+		return initAndInstantiateState(DependencyVisitor.DependencyVisitor, newState);
 	}
 	
 	/**

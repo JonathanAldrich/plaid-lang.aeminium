@@ -1,0 +1,18 @@
+package plaid.typechecker.AST.visitor.helper;
+
+state AeminiumNode {
+	val /*List<ID>*/ variables;
+	val /*ASTNode*/ astRef;
+	val /*Integer*/ num;
+	
+	method equals(other) {
+		match (other) {
+			case AeminiumNode {
+				this.num == other.num;
+			}
+			default {
+				false;
+			}
+		};
+	}
+} 

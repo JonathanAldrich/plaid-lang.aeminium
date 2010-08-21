@@ -9,7 +9,14 @@ state ID case of Expression {
 	}
 	
 	method ==(other) {
-		this.name.equals(other.name);
+		match (other) {
+			case ID {
+				this.name.equals(other.name);
+			}
+			default {
+				false;
+			}
+		};
 	}
 	
 	method hashCode() {

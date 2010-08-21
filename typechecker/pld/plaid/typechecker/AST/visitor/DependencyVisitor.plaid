@@ -1,0 +1,184 @@
+package plaid.typechecker.AST.visitor;
+
+import plaid.typechecker.AST.visitor.helper.*;
+
+state DependencyVisitor case of LeafVisitor {
+	var nodeList;
+	var varSet;
+	
+	var counter = 0;
+	
+	method permToString(perm) {
+		match (perm) {
+			case UniquePermission {
+				"unique";
+			}
+			case ImmutablePermission {
+				"immutable";
+			}
+		};
+	}
+	
+	method idToString(id) {
+		var s = "";
+		match (id.permType.perm) {
+			case UniquePermission {
+				s = "U.";
+			}
+			case ImmutablePermission {
+				s = "I.";
+			}
+		};
+		s + id.name;
+	}
+	
+	method makeAeminiumNode(varSet, node) {
+		counter = counter + 1;
+		java.lang.System.out.print("Aeminium node " + counter + ": ");
+		val it = varSet.iterator();
+		while { it.hasNext(); } {
+			val foo = it.next();
+			java.lang.System.out.print(permToString(foo.permType.perm) + " " + foo.name + ",  ");
+		};
+		java.lang.System.out.println("");
+		
+		new AeminiumNode {
+			val variables = varSet;
+			val backlink = node;
+			val num = counter;
+		};
+	}
+	
+	override method visitApplication(node) {
+		// This is currently incorrectly typed, so we just ignore it
+		// node.f.accept(this);
+
+		varSet = java.util.HashSet.new();		
+		// This must be an ID
+		node.arg.accept(this);
+		
+		nodeList.add(makeAeminiumNode(varSet, node));
+	}
+	
+	override method visitID(node) {
+		varSet.add(node);
+	}
+	
+	override method visitLetBinding(node) {
+		varSet = java.util.HashSet.new();
+		node.x.accept(this);
+		nodeList.add(makeAeminiumNode(varSet, node));
+		
+		node.exp.accept(this);
+		
+		// This must either be a let binding or an application
+		node.body.accept(this);
+	}
+	
+	override method visitMethodDecl(node) {
+		nodeList = java.util.ArrayList.new();
+		
+		val methodType = node.methodType;
+		varSet = java.util.HashSet.new();
+		
+		methodType.argNames.map(fn (name) => {
+			varSet.add(name); 
+		});
+		
+		nodeList.add(makeAeminiumNode(varSet, node));
+		
+		node.body.accept(this);
+		
+
+
+		handleDependencies(nodeList);	
+	}
+	
+	method makeDependency(f, t, v) {
+		new Dependency {
+			val from = f;
+			val to = t;
+			val variable = v;
+		};
+	}
+	
+	method handleDependencies(nodeList) {
+		val readers = java.util.HashMap.new();
+		val writer = java.util.HashMap.new();
+		val s = java.lang.StringBuilder.new("digraph G {\\n\\trankdir=RL;\\n\\n");
+		
+		val nodeIt = nodeList.iterator();
+		while { nodeIt.hasNext(); } {
+			val myDeps = java.util.HashSet.new();
+			
+			
+			val node = nodeIt.next();
+			val varsIt = node.variables.iterator();
+			while { varsIt.hasNext(); } {
+				val v = varsIt.next();
+				
+				match (v.permType.perm) {
+					case ImmutablePermission {
+						if (writer.containsKey(v.name)) {
+							val other = writer.get(v.name);
+							myDeps.add(makeDependency(node, other, v));
+						};
+						
+						if (!readers.containsKey(v.name)) {
+							readers.put(v.name, java.util.HashSet.new());
+						};
+							
+						val r = readers.get(v.name);
+						r.add(node);
+					}
+					
+					case UniquePermission {
+						ifElse (readers.containsKey(v.name)) {
+							val r = readers.get(v.name);
+							val it = r.iterator();
+							
+							while { it.hasNext(); } {
+								val other = it.next();
+								myDeps.add(makeDependency(node, other, v));
+							};
+						} {
+							if (writer.containsKey(v.name)) {
+								val w = writer.get(v.name);
+								myDeps.add(makeDependency(node, w, v));
+							};
+						};
+						
+						writer.put(v.name, node);
+						readers.remove(v.name);
+					}
+				};
+			};
+			
+			// We have now determined myDeps for node
+			s.append(node.num);	s.append(" [ label=\\\"");
+			s.append(node.num);	s.append(": ");
+			val vit = node.variables.iterator();
+			while { vit.hasNext(); } {
+				s.append(idToString(vit.next()));
+				s.append(" ");
+			};
+			s.append("\\\" ];\\n");
+			
+			val it = myDeps.iterator();
+			while { it.hasNext(); } {
+				val dep = it.next();
+				
+				s.append("\\t"); s.append(node.num);
+				s.append(" -> "); s.append(dep.to.num);
+				s.append(" [ label=\\\""); s.append(dep.variable.name);
+				s.append("\\\" ];\\n");
+			};
+		};
+	
+		s.append("}\\n");	
+		val f = java.io.FileWriter.new("dep.dot");
+		f.write(s.toString());
+		f.close();
+		java.lang.Runtime.getRuntime().exec("dot -Tpng -o dep.png dep.dot");
+	}
+}

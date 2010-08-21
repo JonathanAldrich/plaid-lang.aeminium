@@ -10,7 +10,6 @@ import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
-import plaid.runtime.models.map.PlaidJavaObjectMap;
 import typechecker.tests.utils.TestUtils;
 
 public class AeminiumTest {
@@ -28,12 +27,13 @@ public class AeminiumTest {
 	
 	final PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
 	final PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
-	// TODO: Why is this broken?
+	// TODO: Why is this broken?  Doesn't matter right now because we only care about the permission.
 	// final PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
 	final PlaidObject intType = TestUtils.type(new PlaidObject[] { TestUtils.id("Integer") }, new PlaidObject[0]);
 	final PlaidObject immutableInt = TestUtils.permtype(TestUtils.immutable(), intType);
 	final PlaidObject uniqueInt = TestUtils.permtype(TestUtils.unique(), intType);
 	
+	private int varCounter = 1;
 	
 	
 	private PlaidObject makeApplication(String function, String arg, Perm perm) {
@@ -49,22 +49,31 @@ public class AeminiumTest {
 		return TestUtils.application(foo, x);
 	}
 	
+	private PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
+		return TestUtils.let(TestUtils.id("tmp" + varCounter++ + "$plaid", dummyPermType), exp, body);
+	}
+	
 	@Test
 	public void codeGenTest() {
-		final PlaidObject x = TestUtils.id("x", immutableInt);
-		PlaidObject letVar = TestUtils.id("var$plaid", dummyPermType);
+		final PlaidObject x = TestUtils.id("x", uniqueInt);
+		final PlaidObject y = TestUtils.id("y", uniqueInt);
 		
-		PlaidObject firstApp = makeApplication("foo", "x", Perm.IMMUTABLE);
-		PlaidObject secondApp = makeApplication("bar", "x", Perm.IMMUTABLE);
-		
-		PlaidObject let = TestUtils.let(letVar, firstApp, secondApp);
-		
+		PlaidObject methodBody =
+			makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+				makeLet(makeApplication("g", "x", Perm.IMMUTABLE),
+					makeLet(makeApplication("h", "y", Perm.UNIQUE),
+						makeLet(makeApplication("f", "y", Perm.IMMUTABLE),
+							makeLet(makeApplication("g", "y", Perm.IMMUTABLE),
+									makeApplication("h", "y", Perm.UNIQUE))
+			))));
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
 		argTypes.add(immutableInt);
+		argTypes.add(uniqueInt);
 		
 		List<PlaidObject> argNames = new ArrayList<PlaidObject>();
 		argNames.add(x);
+		argNames.add(y);
 
 		PlaidObject methodType = TestUtils.methodType(Util.string("compute"),
 													  dummyPermType,
@@ -72,12 +81,15 @@ public class AeminiumTest {
 													  TestUtils.convertJavaListToPlaidList(argNames));
 		
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("compute"),
-													  let,
+													  methodBody,
 													  x,
 													  Util.falseObject(),
 													  methodType);
 
 		PlaidObject printer = TestUtils.printVisitor();
 		Util.call(Util.lookup("visitMethodDecl", printer), methodDecl);
+		
+		PlaidObject depVisitor = TestUtils.dependencyVisitor();
+		Util.call(Util.lookup("visitMethodDecl", depVisitor), methodDecl);
 	}
 }

@@ -8,7 +8,7 @@ state PrintVisitor case of ASTVisitor {
 	method output(s) {
 		var i = 0;
 		while { i < this.indent; } {
-			java.lang.System.out.print("  ");
+			java.lang.System.out.print("    ");
 			i = i + 1
 		};
 		java.lang.System.out.println(s);
@@ -147,11 +147,10 @@ state PrintVisitor case of ASTVisitor {
 		this.output("MethodDecl(" + node.name + ")");
 		this.inc();
 		node.methodType.accept(this);
-		node.arg.accept(this);
-		node.body.accept(this);
 		if (!node.arg.isNull()) {
 			node.arg.accept(this);
 		};
+		node.body.accept(this);
 		this.dec();
 	}
 	
