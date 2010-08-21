@@ -1,0 +1,52 @@
+package plaid.typechecker.AST.visitor;
+
+import plaid.typechecker.AST.*;
+import plaid.typechecker.util.*;
+
+state AeminiumCodeGenVisitor {
+	val jCodeGen = plaid.compilerjava.util.CodeGen;
+	var y = 0;
+	val out;
+	val idgen = new IdGen;
+	
+	method visitApplication(node) {
+		var /* ID */ x = this.idgen.getId();
+		var /* ID */ y = this.y;
+		var /* ID */ z = this.idgen.getId();
+		// public final PlaidObject x;
+		// public final PlaidObject z;
+		this.out.declareFinalVar(this.out.plaidObjectType, x.name);
+		this.out.declareFinalVar(this.out.plaidObjectType, z.name);
+		
+		this.y = x;
+		node.f.accept(this);
+		
+		this.y = z;
+		node.arg.accept(this);
+		
+		//this.out.setLocation(token);
+		// y = Util.call(x,z);
+
+		this.out.call(x.name, z.name);
+		
+		
+		java.lang.System.out.println(out.toString());
+		out.clear();
+	}
+	
+	method visitID(node) {
+		val /* String */ newName = this.jCodeGen.convertOpNames(node.name);
+		
+		// y = lookup(name, currentScope);
+		this.out.assignToLookup(this.y.name, newName, this.out.localScope);
+		
+		java.lang.System.out.println(out.toString());
+		out.clear();
+	}
+	
+	method visitLetBinding(node) {
+	}
+	
+	method visitMethodDecl(node) {
+	}
+}

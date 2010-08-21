@@ -44,7 +44,7 @@ state DependencyVisitor case of LeafVisitor {
 		
 		new AeminiumNode {
 			val variables = varSet;
-			val backlink = node;
+			val astRef = node;
 			val num = counter;
 		};
 	}
@@ -91,7 +91,10 @@ state DependencyVisitor case of LeafVisitor {
 		
 
 
-		handleDependencies(nodeList);	
+		handleDependencies(nodeList);
+		java.lang.System.out.println("");
+		java.lang.System.out.println("");
+		generateCode(node, nodeList);
 	}
 	
 	method makeDependency(f, t, v) {
@@ -173,6 +176,8 @@ state DependencyVisitor case of LeafVisitor {
 				s.append(" [ label=\\\""); s.append(dep.variable.name);
 				s.append("\\\" ];\\n");
 			};
+			
+			node.dependencies = myDeps;
 		};
 	
 		s.append("}\\n");	
@@ -181,4 +186,39 @@ state DependencyVisitor case of LeafVisitor {
 		f.close();
 		java.lang.Runtime.getRuntime().exec("dot -Tpng -o dep.png dep.dot");
 	}
+	
+	method generateCode(methodNode, aemNodeList) {
+		val it = aemNodeList.iterator();
+		val cc = plaid.compilerjava.CompilerConfiguration.new();
+		cc.setPrettyPrint(java.lang.Boolean.TRUE);
+		cc.setDebugMode(java.lang.Boolean.FALSE);
+		cc.setOutputDir("testOutput/");
+		val cg = plaid.compilerjava.util.CodeGen.new(cc);
+		val codeGenVisitor = new AeminiumCodeGenVisitor {
+			val out = cg;
+		};
+		
+		while { it.hasNext(); } {
+			val aemNode = it.next();
+			java.lang.System.out.println("Body b" + aemNode.num + " = new Body() {");
+			java.lang.System.out.println("	public void execute(Runtime rt, Task parent) {");
+			aemNode.astRef.accept(codeGenVisitor);
+			java.lang.System.out.println("	}\\n}");
+			
+			java.lang.System.out.print("Task t" + aemNode.num + " = plaid.runtime.PlaidRuntime.getAeminium().");
+			java.lang.System.out.println("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
+			
+			java.lang.System.out.println("Collection<Task> deps" + aemNode.num + " = new ArrayList<Task>();");
+			
+			val depIt = aemNode.dependencies.iterator();
+			while { depIt.hasNext(); } {
+				val dep = depIt.next();
+				java.lang.System.out.println("deps" + aemNode.num + ".add(t" + dep.to.num + ");");
+			};
+			java.lang.System.out.println("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
+			
+			java.lang.System.out.println("");
+			java.lang.System.out.println("");
+		};
+	} 
 }

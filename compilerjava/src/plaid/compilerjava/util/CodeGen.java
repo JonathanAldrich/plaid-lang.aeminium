@@ -742,6 +742,10 @@ public class CodeGen {
 		return output.toString();
 	}
 	
+	public void clear() {
+		output.delete(0, output.length());
+	}
+	
 	/*----------------------------
 	 * Testing
 	 *----------------------------
