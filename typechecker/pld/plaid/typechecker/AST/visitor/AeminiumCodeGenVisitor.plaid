@@ -6,42 +6,130 @@ import plaid.typechecker.util.*;
 state AeminiumCodeGenVisitor case of CodeGenVisitor {
 	method generateCode(methodNode, aemNodeList) {
 		val it = aemNodeList.iterator();
+		
+		while { it.hasNext(); } {
+			val aemNode = it.next();
+			this.out.append("aeminium.runtime.Body b" + aemNode.num + " = new aeminium.runtime.Body() {");
+			this.out.append("public void execute(aeminium.runtime.Runtime rt, aeminium.runtime.Task parent) {");
+			
+			var y = this.y;
+			this.y = this.idgen.getId();
+			this.out.declareFinalVar(this.out.plaidObjectType, this.y.name);
+			aemNode.astRef.accept(this);
+			this.y = y;
+			
+			this.out.closeBlock();
+			this.out.append("};");
+			
+			this.out.append("aeminium.runtime.Task t" + aemNode.num + " = plaid.runtime.PlaidRuntime.getAeminium().");
+			this.out.append("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
+			
+			val depIt = aemNode.dependencies.iterator();
+			ifElse (!depIt.hasNext()) {
+				this.out.append("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, aeminium.runtime.Runtime.NO_DEPS);");
+			} {
+				this.out.append("java.util.Collection<aeminium.runtime.Task> deps" + aemNode.num + " = new java.util.ArrayList<aeminium.runtime.Task>();");
+				while { depIt.hasNext(); } {
+					val dep = depIt.next();
+					this.out.append("deps" + aemNode.num + ".add(t" + dep.to.num + ");");
+				};
+				this.out.append("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
+			};
+		};
+	}
+	
+	override method visitLetBinding(node) {
+		val /* ID */ y = this.y;
+	
+		//this.out.setLocation(node.token);
+		this.out.declareFinalVar(this.out.plaidObjectType, node.x.name);
+		
+		this.y = node.x;
+		node.exp.accept(this);
+
+		if (!node.x.name.contains("$plaid")) {
+			// set the immutability of the variable
+			this.out.insertIntoScope(this.out.localScope, node.x.name, 
+				(!node.mutable).jval);
+		};
+		
+		this.y = y;
+	}
+	
+	override method visitMethodDecl(node) {
+		val newName = this.jCodeGen.convertOpNames(node.name);
+		java.lang.System.out.println("Generating code for method '" + newName + "'...");
+
+		val freshReturn = this.idgen.getId();
+		val freshImports = this.idgen.getId();
+		
 		val cc = plaid.compilerjava.CompilerConfiguration.new();
 		cc.setPrettyPrint(java.lang.Boolean.TRUE);
 		cc.setDebugMode(java.lang.Boolean.FALSE);
 		cc.setOutputDir("testOutput/");
-		val cg = plaid.compilerjava.util.CodeGen.new(cc);
-		val codeGenVisitor = new AeminiumCodeGenVisitor {
-			val out = cg;
-		};
+		this.out = this.jCodeGen.new(cc);
 		
-		while { it.hasNext(); } {
-			val aemNode = it.next();
-			java.lang.System.out.println("Body b" + aemNode.num + " = new Body() {");
-			java.lang.System.out.println("	public void execute(Runtime rt, Task parent) {");
-			aemNode.astRef.accept(codeGenVisitor);
-			java.lang.System.out.println("	}\\n}");
-			
-			java.lang.System.out.print("Task t" + aemNode.num + " = plaid.runtime.PlaidRuntime.getAeminium().");
-			java.lang.System.out.println("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
-			
-			java.lang.System.out.println("Collection<Task> deps" + aemNode.num + " = new ArrayList<Task>();");
-			
-			val depIt = aemNode.dependencies.iterator();
-			while { depIt.hasNext(); } {
-				val dep = depIt.next();
-				java.lang.System.out.println("deps" + aemNode.num + ".add(t" + dep.to.num + ");");
-			};
-			java.lang.System.out.println("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
-			
-			java.lang.System.out.println("");
-			java.lang.System.out.println("");
+		val qid = new QI {val qid = this.packageName;};
+		val thisMethod = newName + "_func";
+		val thePackage = qid.toString();
+		
+		//package and needed imports
+		this.out.declarePackage(thePackage);
+		
+		//annotation and class definition
+		this.out.topMethodAnnotation(newName, thePackage);
+		this.out.declarePublicClass(newName);
+		this.out.openBlock(); //public class newName {
+
+		//generate code to create the package scope with imports
+		this.out.declarePublicStaticFinalVar("java.util.List<plaid.runtime.utils.Import>", freshImports.name);
+		
+		this.y = freshImports;
+		this.imports.accept(this);
+
+		this.out.declareGlobalScope(qid.toString(), freshImports.name);
+		
+		if (newName.equals("main") /*&& this.methodType.getArgTypes().get(0) == PermType.UNIT && this.methodType.getArgTypes().size() == 1*/) {
+			this.out.topLevelMain(newName + "_func");
 		};
-	}
-	
-	override method visitMethodDecl(node) {
+
+		this.out.methodAnnotation(newName);
+		this.out.declarePublicStaticFinalVar(this.out.plaidMethodType, thisMethod);
+		this.out.openStaticBlock(); // static {
+		// add local scope so that the lambda creation works properly
+		this.out.declareLocalScope(this.out.globalScope);
+		this.out.assignToNewLambda(thisMethod, node.arg.name);
+		
+		
+		
 		val depVisitor = new DependencyVisitor;
 		// We already know it's a method decl
 		depVisitor.visitMethodDecl(node);
+		
+		
+		generateCode(node, depVisitor.nodeList);
+		
+		
+		
+		this.out.append("return null;");
+		
+		
+		/***** OLD BODY CODE *****
+		this.out.declareVar(this.out.plaidObjectType, freshReturn.name);
+		//top level functions lookup with unit
+		this.y = freshReturn;
+		node.body.accept(this);
+
+		this.out.ret(freshReturn.name);
+		*/
+		
+		
+		this.out.closeAnonymousDeclaration(); // }});
+		
+		this.out.closeBlock(); // }  (for static block)
+		this.out.closeBlock(); // }  (for class declaration)
+		
+		plaid.compilerjava.util.FileGen.createOutputFile(newName,
+			cc.getOutputDir(), this.out.formatFile(), qid.toDirectoryName());
 	}
 }
