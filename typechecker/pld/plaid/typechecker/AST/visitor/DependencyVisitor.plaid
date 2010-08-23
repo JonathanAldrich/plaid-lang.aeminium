@@ -53,11 +53,8 @@ state DependencyVisitor case of LeafVisitor {
 		// This is currently incorrectly typed, so we just ignore it
 		// node.f.accept(this);
 
-		// varSet = java.util.HashSet.new();		
 		// This must be an ID
-		node.arg.accept(this);
-		
-		// nodeList.add(makeAeminiumNode(varSet, node));
+		node.arg.accept(this);		
 	}
 	
 	override method visitID(node) {
@@ -76,7 +73,7 @@ state DependencyVisitor case of LeafVisitor {
 		node.body.accept(this);
 		
 		if (!varSet.isEmpty()) {
-			nodeList.add(makeAeminiumNode(varSet, node));
+			nodeList.add(makeAeminiumNode(varSet, node.body));
 		};
 		
 		varSet = java.util.HashSet.new();
