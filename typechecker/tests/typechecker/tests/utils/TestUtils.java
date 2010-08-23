@@ -10,13 +10,12 @@ import java.util.Set;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
-import com.sun.org.apache.xml.internal.serializer.utils.Utils;
-
 import plaid.compilerjava.AST.Permission;
 import plaid.compilerjava.AST.TypeDecl;
 import plaid.compilerjava.util.FieldRep;
 import plaid.compilerjava.util.MemberRep;
 import plaid.compilerjava.util.MethodRep;
+import plaid.compilerjava.util.QualifiedID;
 import plaid.compilerjava.util.StateRep;
 import plaid.runtime.PlaidConstants;
 import plaid.runtime.PlaidException;
@@ -29,15 +28,15 @@ import plaid.runtime.Util;
 import plaid.runtime.models.map.PlaidJavaObjectMap;
 import plaid.runtime.models.map.PlaidStateMap;
 import plaid.runtime.utils.Delegate;
-import plaid.runtime.utils.QualifiedIdentifier;
 import plaid.runtime.annotations.RepresentsState;
-import plaid.typechecker.AST.ASTTranslator;
 import plaid.typechecker.AST.Application;
+import plaid.typechecker.AST.CompilationUnit;
 import plaid.typechecker.AST.DynPermType;
 import plaid.typechecker.AST.FieldTypeDecl;
 import plaid.typechecker.AST.FullPermission;
 import plaid.typechecker.AST.ID;
 import plaid.typechecker.AST.ImmutablePermission;
+import plaid.typechecker.AST.ImportList;
 import plaid.typechecker.AST.IntLiteral;
 import plaid.typechecker.AST.MethodDecl;
 import plaid.typechecker.AST.MethodTypeDecl;
@@ -48,6 +47,8 @@ import plaid.typechecker.AST.SharedPermission;
 import plaid.typechecker.AST.Type;
 import plaid.typechecker.AST.UnannotatedLetBinding;
 import plaid.typechecker.AST.UniquePermission;
+import plaid.typechecker.AST.visitor.AeminiumCodeGenVisitor;
+import plaid.typechecker.AST.visitor.CodeGenVisitor;
 import plaid.typechecker.AST.visitor.DependencyVisitor;
 import plaid.typechecker.AST.visitor.PrintVisitor;
 import plaid.typechecker.AST.visitor.TypecheckerVisitor;
@@ -81,6 +82,39 @@ public class TestUtils {
 		
 		return initAndInstantiateState(Application.Application, newState);
 	}
+	
+	/**
+	 * Constructs a new CompilationUnit node.
+	 * 
+	 * @return The newly created CompilationUnit AST node.
+	 */
+	public static PlaidObject compilationUnit(final List<PlaidObject> decls, final List<String> packageName,
+											  final PlaidObject imports) {
+		
+		PlaidState newState = Util.newState();
+		newState.addMember(Util.anonymousMemberDef("decls", false, false),
+			protoField(convertJavaListToPlaidList(decls)));
+		newState.addMember(Util.anonymousMemberDef("packageName", false, false),
+				protoField(new PlaidJavaObjectMap(packageName)));
+		newState.addMember(Util.anonymousMemberDef("imports", false, false),
+				protoField(imports));		
+		
+		return initAndInstantiateState(CompilationUnit.CompilationUnit, newState);
+	}
+
+	/**
+	 * Constructs a new ImportList node.
+	 * 
+	 * @return The newly created ImportList AST node.
+	 */
+	public static PlaidObject importList(final List<QualifiedID> qids) {
+		
+		PlaidState newState = Util.newState();
+		newState.addMember(Util.anonymousMemberDef("imports", false, false),
+				protoField(new PlaidJavaObjectMap(qids)));		
+		
+		return initAndInstantiateState(ImportList.ImportList, newState);
+	}	
 	
 	/**
 	 * Constructs a new UnannotatedLetBinding using the given variable, 
@@ -195,13 +229,33 @@ public class TestUtils {
 	}
 	
 	/**
-	 * Constructs a new DependencyVisitor to output a Plaid AST.
+	 * Constructs a new DependencyVisitor.
 	 * 
 	 * @return The newly created DependencyVisitor.
 	 */
 	public static PlaidObject dependencyVisitor() {
 		PlaidState newState = Util.newState();
 		return initAndInstantiateState(DependencyVisitor.DependencyVisitor, newState);
+	}
+	
+	/**
+	 * Constructs a new Plaid CodeGenVisitor.
+	 * 
+	 * @return The newly created Plaid CodeGenVisitor.
+	 */
+	public static PlaidObject plaidCodeGenVisitor() {
+		PlaidState newState = Util.newState();
+		return initAndInstantiateState(CodeGenVisitor.CodeGenVisitor, newState);
+	}
+	
+	/**
+	 * Constructs a new Aeminium CodeGenVisitor.
+	 * 
+	 * @return The newly created Aeminium CodeGenVisitor.
+	 */
+	public static PlaidObject aeminiumCodeGenVisitor() {
+		PlaidState newState = Util.newState();
+		return initAndInstantiateState(AeminiumCodeGenVisitor.AeminiumCodeGenVisitor, newState);
 	}
 	
 	/**
