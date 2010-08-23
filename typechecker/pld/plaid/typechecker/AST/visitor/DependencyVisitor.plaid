@@ -53,11 +53,11 @@ state DependencyVisitor case of LeafVisitor {
 		// This is currently incorrectly typed, so we just ignore it
 		// node.f.accept(this);
 
-		varSet = java.util.HashSet.new();		
+		// varSet = java.util.HashSet.new();		
 		// This must be an ID
 		node.arg.accept(this);
 		
-		nodeList.add(makeAeminiumNode(varSet, node));
+		// nodeList.add(makeAeminiumNode(varSet, node));
 	}
 	
 	override method visitID(node) {
@@ -66,13 +66,20 @@ state DependencyVisitor case of LeafVisitor {
 	
 	override method visitLetBinding(node) {
 		varSet = java.util.HashSet.new();
+		
 		node.x.accept(this);
+		node.exp.accept(this);
 		nodeList.add(makeAeminiumNode(varSet, node));
 		
-		node.exp.accept(this);
-		
 		// This must either be a let binding or an application
+		varSet = java.util.HashSet.new();
 		node.body.accept(this);
+		
+		if (!varSet.isEmpty()) {
+			nodeList.add(makeAeminiumNode(varSet, node));
+		};
+		
+		varSet = java.util.HashSet.new();
 	}
 	
 	override method visitMethodDecl(node) {
@@ -85,7 +92,7 @@ state DependencyVisitor case of LeafVisitor {
 			varSet.add(name); 
 		});
 		
-		nodeList.add(makeAeminiumNode(varSet, node));
+		// nodeList.add(makeAeminiumNode(varSet, node));
 		
 		node.body.accept(this);
 		
@@ -153,7 +160,7 @@ state DependencyVisitor case of LeafVisitor {
 			};
 			
 			// We have now determined myDeps for node
-			s.append(node.num);	s.append(" [ label=\\\"");
+			s.append("\\t"); s.append(node.num); s.append(" [ label=\\\"");
 			s.append(node.num);	s.append(": ");
 			val vit = node.variables.iterator();
 			while { vit.hasNext(); } {

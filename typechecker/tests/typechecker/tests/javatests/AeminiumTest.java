@@ -51,29 +51,26 @@ public class AeminiumTest {
 	}
 	
 	private PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
-		return TestUtils.let(TestUtils.id("tmp" + varCounter++ + "$plaid", dummyPermType), exp, body);
+		return TestUtils.let(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
 	}
 	
 	public PlaidObject makeTestMethodDecl() {
 		final PlaidObject x = TestUtils.id("x", uniqueInt);
-		final PlaidObject y = TestUtils.id("y", uniqueInt);
+		// final PlaidObject y = TestUtils.id("y", uniqueInt);
 		
 		PlaidObject methodBody =
 			makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
 				makeLet(makeApplication("g", "x", Perm.IMMUTABLE),
-					makeLet(makeApplication("h", "y", Perm.UNIQUE),
-						makeLet(makeApplication("f", "y", Perm.IMMUTABLE),
-							makeLet(makeApplication("g", "y", Perm.IMMUTABLE),
-									makeApplication("h", "y", Perm.UNIQUE))
-			))));
+					makeLet(makeApplication("h", "x", Perm.UNIQUE),
+						makeLet(makeApplication("g", "x", Perm.IMMUTABLE),
+								makeApplication("h", "x", Perm.UNIQUE))
+			)));
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
-		argTypes.add(immutableInt);
 		argTypes.add(uniqueInt);
 		
 		List<PlaidObject> argNames = new ArrayList<PlaidObject>();
 		argNames.add(x);
-		argNames.add(y);
 
 		PlaidObject methodType = TestUtils.methodType(Util.string("compute"),
 													  dummyPermType,
@@ -110,8 +107,8 @@ public class AeminiumTest {
 		PlaidObject printer = TestUtils.printVisitor();
 		Util.call(Util.lookup("visitCompilationUnit", printer), cu);
 		
-		PlaidObject plaidCodeGen = TestUtils.plaidCodeGenVisitor();
-		Util.call(Util.lookup("visitCompilationUnit", plaidCodeGen), cu);
+//		PlaidObject plaidCodeGen = TestUtils.plaidCodeGenVisitor();
+//		Util.call(Util.lookup("visitCompilationUnit", plaidCodeGen), cu);
 		
 		PlaidObject aemCodeGen = TestUtils.aeminiumCodeGenVisitor();
 		Util.call(Util.lookup("visitCompilationUnit", aemCodeGen), cu);
