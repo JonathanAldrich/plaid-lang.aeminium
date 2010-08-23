@@ -89,12 +89,7 @@ state DependencyVisitor case of LeafVisitor {
 		
 		node.body.accept(this);
 		
-
-
-		handleDependencies(nodeList);
-		java.lang.System.out.println("");
-		java.lang.System.out.println("");
-		generateCode(node, nodeList);
+		handleDependencies(node.name);
 	}
 	
 	method makeDependency(f, t, v) {
@@ -105,7 +100,7 @@ state DependencyVisitor case of LeafVisitor {
 		};
 	}
 	
-	method handleDependencies(nodeList) {
+	method handleDependencies(name) {
 		val readers = java.util.HashMap.new();
 		val writer = java.util.HashMap.new();
 		val s = java.lang.StringBuilder.new("digraph G {\\n\\trankdir=RL;\\n\\n");
@@ -181,44 +176,9 @@ state DependencyVisitor case of LeafVisitor {
 		};
 	
 		s.append("}\\n");	
-		val f = java.io.FileWriter.new("dep.dot");
+		val f = java.io.FileWriter.new(name + ".dot");
 		f.write(s.toString());
 		f.close();
-		java.lang.Runtime.getRuntime().exec("dot -Tpng -o dep.png dep.dot");
+		java.lang.Runtime.getRuntime().exec("dot -Tpng -o " + name + ".png " + name + ".dot");
 	}
-	
-	method generateCode(methodNode, aemNodeList) {
-		val it = aemNodeList.iterator();
-		val cc = plaid.compilerjava.CompilerConfiguration.new();
-		cc.setPrettyPrint(java.lang.Boolean.TRUE);
-		cc.setDebugMode(java.lang.Boolean.FALSE);
-		cc.setOutputDir("testOutput/");
-		val cg = plaid.compilerjava.util.CodeGen.new(cc);
-		val codeGenVisitor = new AeminiumCodeGenVisitor {
-			val out = cg;
-		};
-		
-		while { it.hasNext(); } {
-			val aemNode = it.next();
-			java.lang.System.out.println("Body b" + aemNode.num + " = new Body() {");
-			java.lang.System.out.println("	public void execute(Runtime rt, Task parent) {");
-			aemNode.astRef.accept(codeGenVisitor);
-			java.lang.System.out.println("	}\\n}");
-			
-			java.lang.System.out.print("Task t" + aemNode.num + " = plaid.runtime.PlaidRuntime.getAeminium().");
-			java.lang.System.out.println("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
-			
-			java.lang.System.out.println("Collection<Task> deps" + aemNode.num + " = new ArrayList<Task>();");
-			
-			val depIt = aemNode.dependencies.iterator();
-			while { depIt.hasNext(); } {
-				val dep = depIt.next();
-				java.lang.System.out.println("deps" + aemNode.num + ".add(t" + dep.to.num + ");");
-			};
-			java.lang.System.out.println("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
-			
-			java.lang.System.out.println("");
-			java.lang.System.out.println("");
-		};
-	} 
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import plaid.compilerjava.util.QualifiedID;
 import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
@@ -53,8 +54,7 @@ public class AeminiumTest {
 		return TestUtils.let(TestUtils.id("tmp" + varCounter++ + "$plaid", dummyPermType), exp, body);
 	}
 	
-	@Test
-	public void codeGenTest() {
+	public PlaidObject makeTestMethodDecl() {
 		final PlaidObject x = TestUtils.id("x", uniqueInt);
 		final PlaidObject y = TestUtils.id("y", uniqueInt);
 		
@@ -85,11 +85,35 @@ public class AeminiumTest {
 													  x,
 													  Util.falseObject(),
 													  methodType);
+		
+		return methodDecl;
+	}
+	
+	public PlaidObject makeCompilationUnit() {
+		List<QualifiedID> qids = new ArrayList<QualifiedID>();
+		PlaidObject imports = TestUtils.importList(qids);
+		
+		List<String> packageName = new ArrayList<String>();
+		packageName.add("aeminiumTests");
+		packageName.add("simpleExample");
+		
+		List<PlaidObject> decls = new ArrayList<PlaidObject>();
+		decls.add(makeTestMethodDecl());
+		
+		return TestUtils.compilationUnit(decls, packageName, imports);
+	}
+	
+	@Test
+	public void codeGenTest() {
+		PlaidObject cu = makeCompilationUnit();
 
 		PlaidObject printer = TestUtils.printVisitor();
-		Util.call(Util.lookup("visitMethodDecl", printer), methodDecl);
+		Util.call(Util.lookup("visitCompilationUnit", printer), cu);
 		
-		PlaidObject depVisitor = TestUtils.dependencyVisitor();
-		Util.call(Util.lookup("visitMethodDecl", depVisitor), methodDecl);
+		PlaidObject plaidCodeGen = TestUtils.plaidCodeGenVisitor();
+		Util.call(Util.lookup("visitCompilationUnit", plaidCodeGen), cu);
+		
+		PlaidObject aemCodeGen = TestUtils.aeminiumCodeGenVisitor();
+		Util.call(Util.lookup("visitCompilationUnit", aemCodeGen), cu);
 	}
 }
