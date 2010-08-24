@@ -189,30 +189,29 @@ state PrintVisitor case of ASTVisitor {
 	}
 	
 	method visitPermType(node) {
-		this.output("PermType");
+		var s = "PermType: ";
 		
-		this.inc();
 		// TODO: Do proper dispatch
 		match (node.perm) {
 			case ImmutablePermission {
-				output("immutable");
+				s = s + "immutable ";
 			}
 			case UniquePermission {
-				output("unique");
+				s = s + "unique ";
 			}
 		};
 		
 		ifElse (node.type.typeAbbrevs.isEmpty()) {
-			output("<unknown>");
+			s = s + "<unknown>";
 		} {
 			val it = node.type.typeAbbrevs.iterator();
 			
 			while { it.hasNext(); } {
-				output(it.next().name);
+				s = s + it.next().name;
 			};
 		};
 		
-		this.dec();
+		this.output(s);
 	}
 	
 	method visitQI(node) {

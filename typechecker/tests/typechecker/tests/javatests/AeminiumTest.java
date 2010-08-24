@@ -28,17 +28,20 @@ public class AeminiumTest {
 	
 	final PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
 	final PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
+	final PlaidObject immutableDummyPermType = TestUtils.permtype(TestUtils.immutable(), dummyType);
 	// TODO: Why is this broken?  Doesn't matter right now because we only care about the permission.
 	// final PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
 	final PlaidObject intType = TestUtils.type(new PlaidObject[] { TestUtils.id("Integer") }, new PlaidObject[0]);
 	final PlaidObject immutableInt = TestUtils.permtype(TestUtils.immutable(), intType);
 	final PlaidObject uniqueInt = TestUtils.permtype(TestUtils.unique(), intType);
+	final PlaidObject stringType = TestUtils.type(new PlaidObject[] { TestUtils.id("String") }, new PlaidObject[0]);
+	final PlaidObject immutableString = TestUtils.permtype(TestUtils.immutable(), stringType);
 	
 	private int varCounter = 1;
 	
 	
 	private PlaidObject makeApplication(String function, String arg, Perm perm) {
-		PlaidObject foo = TestUtils.id(function, dummyPermType);
+		PlaidObject foo = TestUtils.id(function, immutableDummyPermType);
 		
 		PlaidObject permType;
 		if (perm == Perm.UNIQUE)
@@ -50,8 +53,12 @@ public class AeminiumTest {
 		return TestUtils.application(foo, x);
 	}
 	
+	private PlaidObject makeLet(PlaidObject x, PlaidObject exp, PlaidObject body) {
+		return TestUtils.let(x, exp, body);
+	}
+	
 	private PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
-		return TestUtils.let(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
+		return makeLet(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
 	}
 	
 	public PlaidObject makeTestMethodDecl() {
@@ -104,18 +111,15 @@ public class AeminiumTest {
 	}
 	
 	public PlaidObject makePrintString(String toPrint) {
-		PlaidObject printFun =
-			TestUtils.dereference(
-				TestUtils.dereference(
-					TestUtils.dereference(
-						TestUtils.dereference(
-							TestUtils.id("java", dummyPermType),
-							TestUtils.id("lang", dummyPermType)),
-						TestUtils.id("System", dummyPermType)),
-					TestUtils.id("out", dummyPermType)),
-				TestUtils.id("println", dummyPermType));
+		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
+		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
+		PlaidObject s = TestUtils.id("s", dummyPermType);
 		
-		return TestUtils.application(printFun, TestUtils.stringLiteral(toPrint));
+		return
+			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+					makeLet(s, TestUtils.stringLiteral(toPrint),
+							   TestUtils.application(p2, s))));
 	}
 	
 	public PlaidObject makeCalledMethodDecl(String name) {

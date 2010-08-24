@@ -18,7 +18,8 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			val savedY = this.y;
 			aemNode.astRef.accept(this);
 			if (!it.hasNext()) {
-				this.out.append("parent.setResult(" + savedY.name + ");");
+				// this.out.append("parent.setResult(" + savedY.name + ");");
+				this.out.append("parent.setResult(null);");
 			};
 			this.y = y;
 						
@@ -105,7 +106,7 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 		this.out.assignToNewLambda(thisMethod, node.arg.name);
 		
 		
-		ifElse (newName.equals("compute")) {
+		ifElse (!newName.equals("main")) {
 			val depVisitor = new DependencyVisitor;
 			// We already know it's a method decl
 			depVisitor.visitMethodDecl(node);
@@ -113,7 +114,8 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			generateCode(node, depVisitor.nodeList);
 		
 			val n = depVisitor.nodeList.size();
-			this.out.append("return (plaid.runtime.PlaidObject) t" + n + ".getResult();");
+			this.out.append("plaid.runtime.PlaidObject res = (plaid.runtime.PlaidObject) t" + n + ".getResult();");
+			this.out.append("return res;");
 		} {
 			this.out.declareVar(this.out.plaidObjectType, freshReturn.name);
 			//top level functions lookup with unit
