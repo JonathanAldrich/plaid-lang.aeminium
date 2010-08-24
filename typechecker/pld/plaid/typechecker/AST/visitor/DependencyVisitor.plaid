@@ -50,10 +50,10 @@ state DependencyVisitor case of LeafVisitor {
 	}
 	
 	override method visitApplication(node) {
-		// This is currently incorrectly typed, so we just ignore it
-		// node.f.accept(this);
-
 		// This must be an ID
+		node.f.accept(this);
+
+		// This must be an ID, too
 		node.arg.accept(this);		
 	}
 	
