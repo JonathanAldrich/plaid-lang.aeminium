@@ -86,6 +86,54 @@ public class AeminiumTest {
 		return methodDecl;
 	}
 	
+	public PlaidObject makeMainMethodDecl() {
+		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", dummyPermType), TestUtils.unitLiteral());
+		
+		PlaidObject methodType = TestUtils.methodType(Util.string("main"),
+													  dummyPermType,
+													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
+													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
+		
+		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("main"),
+													  mainBody,
+													  TestUtils.id("mainArg", dummyPermType),
+													  Util.falseObject(),
+													  methodType);
+		
+		return methodDecl;
+	}
+	
+	public PlaidObject makePrintString(String toPrint) {
+		PlaidObject printFun =
+			TestUtils.dereference(
+				TestUtils.dereference(
+					TestUtils.dereference(
+						TestUtils.dereference(
+							TestUtils.id("java", dummyPermType),
+							TestUtils.id("lang", dummyPermType)),
+						TestUtils.id("System", dummyPermType)),
+					TestUtils.id("out", dummyPermType)),
+				TestUtils.id("println", dummyPermType));
+		
+		return TestUtils.application(printFun, TestUtils.stringLiteral(toPrint));
+	}
+	
+	public PlaidObject makeCalledMethodDecl(String name) {
+		PlaidObject body = makePrintString("I'm currently inside '" + name + "'!");
+		PlaidObject methodType = TestUtils.methodType(Util.string(name),
+				  									  dummyPermType,
+				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
+				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
+
+		PlaidObject methodDecl = TestUtils.methodDecl(Util.string(name),
+				  									  body,
+				  									  TestUtils.id(name + "Arg", dummyPermType),
+				  									  Util.falseObject(),
+				  									  methodType);
+
+		return methodDecl;		
+	}
+	
 	public PlaidObject makeCompilationUnit() {
 		List<QualifiedID> qids = new ArrayList<QualifiedID>();
 		PlaidObject imports = TestUtils.importList(qids);
@@ -95,7 +143,11 @@ public class AeminiumTest {
 		packageName.add("simpleExample");
 		
 		List<PlaidObject> decls = new ArrayList<PlaidObject>();
+		decls.add(makeMainMethodDecl());
 		decls.add(makeTestMethodDecl());
+		decls.add(makeCalledMethodDecl("f"));
+		decls.add(makeCalledMethodDecl("g"));
+		decls.add(makeCalledMethodDecl("h"));
 		
 		return TestUtils.compilationUnit(decls, packageName, imports);
 	}
