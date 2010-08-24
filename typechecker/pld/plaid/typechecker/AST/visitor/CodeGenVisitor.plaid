@@ -88,8 +88,16 @@ state CodeGenVisitor case of ASTVisitor {
 		this.packageName = node.packageName;
 		this.imports = node.imports;
 		this.idgen = new IdGen;
-		val qid = new QI {val qid = this.packageName;};
-		this.imports.imports.add(qid.all());
+		
+		// This is a workaround
+		node.decls.map(fn (d) => {
+			var name = java.util.ArrayList.new();
+			name.addAll(node.packageName);
+			name.add(d.getName());
+			
+			val qid = new QI {val qid = name;};
+			this.imports.imports.add(qid);
+		});
 
 		node.decls.map(fn (d) => {
 			this.top = true;
@@ -198,8 +206,6 @@ state CodeGenVisitor case of ASTVisitor {
 		this.out.assignToNewJavaObject(y.name, 
 			"java.util.ArrayList<plaid.runtime.utils.Import>");
 		
-		node.addStdLibrary();
-
 		val it = node.imports.iterator();
 		while { it.hasNext(); } {
 			val qi = it.next();
