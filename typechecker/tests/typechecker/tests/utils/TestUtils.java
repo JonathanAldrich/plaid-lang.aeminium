@@ -31,6 +31,7 @@ import plaid.runtime.utils.Delegate;
 import plaid.runtime.annotations.RepresentsState;
 import plaid.typechecker.AST.Application;
 import plaid.typechecker.AST.CompilationUnit;
+import plaid.typechecker.AST.Dereference;
 import plaid.typechecker.AST.DynPermType;
 import plaid.typechecker.AST.FieldTypeDecl;
 import plaid.typechecker.AST.FullPermission;
@@ -44,9 +45,11 @@ import plaid.typechecker.AST.NonePermission;
 import plaid.typechecker.AST.PermType;
 import plaid.typechecker.AST.PurePermission;
 import plaid.typechecker.AST.SharedPermission;
+import plaid.typechecker.AST.StringLiteral;
 import plaid.typechecker.AST.Type;
 import plaid.typechecker.AST.UnannotatedLetBinding;
 import plaid.typechecker.AST.UniquePermission;
+import plaid.typechecker.AST.UnitLiteral;
 import plaid.typechecker.AST.visitor.AeminiumCodeGenVisitor;
 import plaid.typechecker.AST.visitor.CodeGenVisitor;
 import plaid.typechecker.AST.visitor.DependencyVisitor;
@@ -201,6 +204,58 @@ public class TestUtils {
 		// instantiate the new prototype
 		return initAndInstantiateState(IntLiteral.IntLiteral, newState);
 	}
+
+	/**
+	 * Constructs a new StringLiteral given a string.
+	 * 
+	 * @param num The value of the StringLiteral AST node.
+	 * @return The newly created StringLiteral AST node.
+	 */
+	public static PlaidObject stringLiteral(final String str) {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+		
+		// add the necessary members to the new prototype
+		newState.addMember(Util.anonymousMemberDef("string", false, false), 
+				protoField(Util.string(str)));
+		
+		// instantiate the new prototype
+		return initAndInstantiateState(StringLiteral.StringLiteral, newState);
+	}
+	
+	/**
+	 * Constructs a new UnitLiteral.
+	 * 
+	 * @return The newly created UnitLiteral AST node.
+	 */
+	public static PlaidObject unitLiteral() {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+		
+		// instantiate the new prototype
+		return initAndInstantiateState(UnitLiteral.UnitLiteral, newState);
+	}
+	
+	/**
+	 * Constructs a new Dereference node.
+	 * 
+	 * @param left TODO
+	 * @param right TODO
+	 * @return The newly created Dereference AST node.
+	 */
+	public static PlaidObject dereference(final PlaidObject left, final PlaidObject right) {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+
+		// add the necessary members to the new prototype
+		newState.addMember(Util.anonymousMemberDef("left", false, false), 
+				protoField(left));
+		newState.addMember(Util.anonymousMemberDef("right", false, false), 
+				protoField(right));
+		
+		// instantiate the new prototype
+		return initAndInstantiateState(Dereference.Dereference, newState);
+	}	
 	
 	/**
 	 * Constructs a new TypecheckerVisitor to use for typechecking tests.
