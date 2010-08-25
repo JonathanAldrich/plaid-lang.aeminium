@@ -63,56 +63,57 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	
 	@Override
 	public PlaidObject lookup(String name, PlaidObject pthis) throws PlaidException {
-
-		if (pthis == unit()) {
-			return loadClass(name);
-		}
-		else if (pthis instanceof PlaidLookupMap) {
-			PlaidLookupMap ppm = (PlaidLookupMap)pthis;
-			return lookup(ppm.append(name));
-		}
-		else {
-			// if the name is our special Plaid constructor for Java objects, 
-			// look in the prototype of the current object
-			if (name.equals(PlaidJavaConstructorMap.NAME)) {
-				if (pthis instanceof PlaidJavaStateMap) {
-					PlaidJavaStateMap pjsm = (PlaidJavaStateMap)pthis;
-					Map<PlaidMemberDef, PlaidObject> members = pjsm.prototype.getMembers();
-					for (PlaidMemberDef m : members.keySet()) {
-						if (m.getMemberName().equals(name)) {
-							return members.get(m);
+		synchronized (pthis) {
+			if (pthis == unit()) {
+				return loadClass(name);
+			}
+			else if (pthis instanceof PlaidLookupMap) {
+				PlaidLookupMap ppm = (PlaidLookupMap)pthis;
+				return lookup(ppm.append(name));
+			}
+			else {
+				// if the name is our special Plaid constructor for Java objects, 
+				// look in the prototype of the current object
+				if (name.equals(PlaidJavaConstructorMap.NAME)) {
+					if (pthis instanceof PlaidJavaStateMap) {
+						PlaidJavaStateMap pjsm = (PlaidJavaStateMap)pthis;
+						Map<PlaidMemberDef, PlaidObject> members = pjsm.prototype.getMembers();
+						for (PlaidMemberDef m : members.keySet()) {
+							if (m.getMemberName().equals(name)) {
+								return members.get(m);
+							}
 						}
 					}
+					else {
+						throw new PlaidRuntimeException("Non-Java object has a Java constructor.");
+					}
 				}
-				else {
-					throw new PlaidRuntimeException("Non-Java object has a Java constructor.");
+
+				// check members 
+				Map<PlaidMemberDef,PlaidObject> members = pthis.getMembers();
+				for (PlaidMemberDef m : members.keySet()) {
+					if (name.equals(m.getMemberName()))
+						return members.get(m);
 				}
-			}
-			
-			// check members 
-			Map<PlaidMemberDef,PlaidObject> members = pthis.getMembers();
-			for (PlaidMemberDef m : members.keySet()) {
-				if (name.equals(m.getMemberName()))
-					return members.get(m);
-			}
-			
-			for (PlaidObject os : pthis.getStates()) {
-				PlaidStateMap s = (PlaidStateMap)os;
-				if (s.getName().equals(name)) {
-					return s;
+
+				for (PlaidObject os : pthis.getStates()) {
+					PlaidStateMap s = (PlaidStateMap)os;
+					if (s.getName().equals(name)) {
+						return s;
+					}
 				}
+
+				// check packages recursively
+				for (PlaidObject os : pthis.getStates()) {
+					PlaidStateMap s = (PlaidStateMap)os;
+					PlaidPackage pkg = s.getPackage();					
+					try {
+						return lookup(name, pkg);
+					} catch (PlaidException ex) { /* continue with next state */ }
+				}
+
+				throw new PlaidException("Member '" + name + "' not found.");
 			}
-			
-			// check packages recursively
-			for (PlaidObject os : pthis.getStates()) {
-				PlaidStateMap s = (PlaidStateMap)os;
-				PlaidPackage pkg = s.getPackage();					
-				try {
-					return lookup(name, pkg);
-				} catch (PlaidException ex) { /* continue with next state */ }
-			}
-			
-			throw new PlaidException("Member '" + name + "' not found.");
 		}
 	}
 
