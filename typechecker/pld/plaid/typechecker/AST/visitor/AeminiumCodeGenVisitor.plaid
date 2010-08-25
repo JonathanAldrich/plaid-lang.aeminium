@@ -19,26 +19,26 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			aemNode.astRef.accept(this);
 			if (!it.hasNext()) {
 				// this.out.append("parent.setResult(" + savedY.name + ");");
-				this.out.append("parent.setResult(null);");
+				this.out.append("parent.setResult(new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42)));");
 			};
 			this.y = y;
 						
 			this.out.closeBlock();
 			this.out.append("};");
 			
-			this.out.append("aeminium.runtime.Task t" + aemNode.num + " = plaid.runtime.PlaidRuntime.getAeminium().");
+			this.out.append("aeminium.runtime.Task t" + aemNode.num + " = aeminium.runtime.implementations.Factory.getRuntime().");
 			this.out.append("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
 			
 			val depIt = aemNode.dependencies.iterator();
 			ifElse (!depIt.hasNext()) {
-				this.out.append("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, aeminium.runtime.Runtime.NO_DEPS);");
+				this.out.append("aeminium.runtime.implementations.Factory.getRuntime().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, aeminium.runtime.Runtime.NO_DEPS);");
 			} {
 				this.out.append("java.util.Collection<aeminium.runtime.Task> deps" + aemNode.num + " = new java.util.ArrayList<aeminium.runtime.Task>();");
 				while { depIt.hasNext(); } {
 					val dep = depIt.next();
 					this.out.append("deps" + aemNode.num + ".add(t" + dep.to.num + ");");
 				};
-				this.out.append("plaid.runtime.PlaidRuntime.getAeminium().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
+				this.out.append("aeminium.runtime.implementations.Factory.getRuntime().schedule(t" + aemNode.num + ", aeminium.runtime.Runtime.NO_PARENT, deps" + aemNode.num + ");");
 			};
 		};
 	}
