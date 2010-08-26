@@ -1,4 +1,9 @@
-package typechecker.tests.javatests;
+package typechecker.tests.aeminium;
+
+import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
+import static typechecker.tests.aeminium.AeminiumUtils.makeApplication;
+import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
+import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,9 +16,10 @@ import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
+import typechecker.tests.aeminium.AeminiumUtils.Perm;
 import typechecker.tests.utils.TestUtils;
 
-public class AeminiumTest {
+public class ParallelTasksExample {
 	@BeforeClass
 	public static void beforeClass() {
 		// we need to do this so the Runtime doesn't deadlock if there are hooks into it
@@ -21,57 +27,19 @@ public class AeminiumTest {
 		PlaidRuntime.getRuntime().setRuntimeState(RUNTIME_STATE.RUNNING);
 	}
 	
-	private enum Perm {
-		UNIQUE,
-		IMMUTABLE
-	}
-	
-	final PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
-	final PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
-	final PlaidObject immutableDummyPermType = TestUtils.permtype(TestUtils.immutable(), dummyType);
-	// TODO: Why is this broken?  Doesn't matter right now because we only care about the permission.
-	// final PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
-	final PlaidObject intType = TestUtils.type(new PlaidObject[] { TestUtils.id("Integer") }, new PlaidObject[0]);
-	final PlaidObject immutableInt = TestUtils.permtype(TestUtils.immutable(), intType);
-	final PlaidObject uniqueInt = TestUtils.permtype(TestUtils.unique(), intType);
-	final PlaidObject stringType = TestUtils.type(new PlaidObject[] { TestUtils.id("String") }, new PlaidObject[0]);
-	final PlaidObject immutableString = TestUtils.permtype(TestUtils.immutable(), stringType);
-	
-	private int varCounter = 1;
-	
-	
-	private PlaidObject makeApplication(String function, String arg, Perm perm) {
-		PlaidObject foo = TestUtils.id(function, immutableDummyPermType);
-		
-		PlaidObject permType;
-		if (perm == Perm.UNIQUE)
-			permType = uniqueInt;
-		else
-			permType = immutableInt;
-		
-		PlaidObject x = TestUtils.id(arg, permType);
-		return TestUtils.application(foo, x);
-	}
-	
-	private PlaidObject makeLet(PlaidObject x, PlaidObject exp, PlaidObject body) {
-		return TestUtils.let(x, exp, body);
-	}
-	
-	private PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
-		return makeLet(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
-	}
-	
 	public PlaidObject makeTestMethodDecl() {
 		final PlaidObject x = TestUtils.id("x", uniqueInt);
-		// final PlaidObject y = TestUtils.id("y", uniqueInt);
 		
 		PlaidObject methodBody =
 			makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-				makeLet(makeApplication("g", "x", Perm.IMMUTABLE),
-					makeLet(makeApplication("h", "x", Perm.UNIQUE),
-						makeLet(makeApplication("g", "x", Perm.IMMUTABLE),
-								makeApplication("h", "x", Perm.UNIQUE))
-			)));
+				makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+					makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+						makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+							makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+								makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+									makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
+											makeApplication("f", "x", Perm.IMMUTABLE))
+			))))));
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
 		argTypes.add(uniqueInt);
@@ -117,13 +85,13 @@ public class AeminiumTest {
 		
 		return
 			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("print", dummyPermType)),
 					makeLet(s, TestUtils.stringLiteral(toPrint),
 							   TestUtils.application(p2, s))));
 	}
 	
 	public PlaidObject makeCalledMethodDecl(String name) {
-		PlaidObject body = makePrintString("I'm currently inside '" + name + "'!");
+		PlaidObject body = makePrintString("");
 		PlaidObject methodType = TestUtils.methodType(Util.string(name),
 				  									  dummyPermType,
 				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
@@ -144,14 +112,12 @@ public class AeminiumTest {
 		
 		List<String> packageName = new ArrayList<String>();
 		packageName.add("aeminiumTests");
-		packageName.add("simpleExample");
+		packageName.add("parallelTasks");
 		
 		List<PlaidObject> decls = new ArrayList<PlaidObject>();
 		decls.add(makeMainMethodDecl());
 		decls.add(makeTestMethodDecl());
 		decls.add(makeCalledMethodDecl("f"));
-		decls.add(makeCalledMethodDecl("g"));
-		decls.add(makeCalledMethodDecl("h"));
 		
 		return TestUtils.compilationUnit(decls, packageName, imports);
 	}

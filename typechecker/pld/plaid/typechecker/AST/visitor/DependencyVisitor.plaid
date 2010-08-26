@@ -7,6 +7,7 @@ state DependencyVisitor case of LeafVisitor {
 	var varSet;
 	
 	var counter = 0;
+	var insideFunctionBlock = false;
 	
 	method permToString(perm) {
 		match (perm) {
@@ -35,7 +36,7 @@ state DependencyVisitor case of LeafVisitor {
 	method makeAeminiumNode(varSet, node) {
 		counter = counter + 1;
 		java.lang.System.out.print("Aeminium node " + counter + ": ");
-		val it = varSet.iterator();
+		val it = this.varSet.iterator();
 		while { it.hasNext(); } {
 			val foo = it.next();
 			java.lang.System.out.print(permToString(foo.permType.perm) + " " + foo.name + ",  ");
@@ -43,7 +44,7 @@ state DependencyVisitor case of LeafVisitor {
 		java.lang.System.out.println("");
 		
 		new AeminiumNode {
-			val variables = varSet;
+			val variables = this.varSet;
 			val astRef = node;
 			val num = counter;
 		};
@@ -58,35 +59,56 @@ state DependencyVisitor case of LeafVisitor {
 	}
 	
 	override method visitID(node) {
-		varSet.add(node);
+		this.varSet.add(node);
 	}
 	
 	override method visitLetBinding(node) {
-		varSet = java.util.HashSet.new();
+		this.varSet = java.util.HashSet.new();
 		
 		node.x.accept(this);
 		node.exp.accept(this);
-		nodeList.add(makeAeminiumNode(varSet, node));
+		nodeList.add(makeAeminiumNode(this.varSet, node));
 		
 		// This must either be a let binding or an application
-		varSet = java.util.HashSet.new();
+		this.varSet = java.util.HashSet.new();
 		node.body.accept(this);
 		
 		if (!varSet.isEmpty()) {
-			nodeList.add(makeAeminiumNode(varSet, node.body));
+			this.nodeList.add(makeAeminiumNode(varSet, node.body));
 		};
 		
-		varSet = java.util.HashSet.new();
+		this.varSet = java.util.HashSet.new();
+	}
+	
+	override method visitLambda(node) {
+		if (!this.insideFunctionBlock) {
+			this.insideFunctionBlock = true;
+			this.nodeList = java.util.ArrayList.new();
+		
+			val methodType = node.methodType;
+			this.varSet = java.util.HashSet.new();
+		
+			methodType.argNames.map(fn (name) => {
+				this.varSet.add(name); 
+			});
+		
+			node.body.accept(this);
+		
+			handleDependencies("LAMBDA");
+		
+			this.insideFunctionBlock = false;
+		};
 	}
 	
 	override method visitMethodDecl(node) {
-		nodeList = java.util.ArrayList.new();
+		this.insideFunctionBlock = true;
+		this.nodeList = java.util.ArrayList.new();
 		
 		val methodType = node.methodType;
-		varSet = java.util.HashSet.new();
+		this.varSet = java.util.HashSet.new();
 		
 		methodType.argNames.map(fn (name) => {
-			varSet.add(name); 
+			this.varSet.add(name); 
 		});
 		
 		// nodeList.add(makeAeminiumNode(varSet, node));
@@ -94,6 +116,7 @@ state DependencyVisitor case of LeafVisitor {
 		node.body.accept(this);
 		
 		handleDependencies(node.name);
+		this.insideFunctionBlock = false;
 	}
 	
 	method makeDependency(f, t, v) {

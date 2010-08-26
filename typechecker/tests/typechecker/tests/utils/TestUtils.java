@@ -39,6 +39,7 @@ import plaid.typechecker.AST.ID;
 import plaid.typechecker.AST.ImmutablePermission;
 import plaid.typechecker.AST.ImportList;
 import plaid.typechecker.AST.IntLiteral;
+import plaid.typechecker.AST.Lambda;
 import plaid.typechecker.AST.MethodDecl;
 import plaid.typechecker.AST.MethodTypeDecl;
 import plaid.typechecker.AST.NonePermission;
@@ -70,6 +71,23 @@ public class TestUtils {
 		PlaidMethod convertMethod = Util.toPlaidMethod(Util.lookup("plaid.lang.globals.javaListToPlaidList", Util.unit()));
 		return convertMethod.invoke(new PlaidJavaObjectMap(javaList));
 	}
+	
+	/**
+	 * Constructs a new Lambda AST node.
+	 * 
+	 * @param x TODO
+	 * @param body TODO
+	 * @param methodType TODO
+	 * @return The newly created Lambda AST node.
+	 */
+	public static PlaidObject lambda(final PlaidObject x, final PlaidObject body, final PlaidObject methodType) {
+		PlaidState newState = Util.newState();
+		newState.addMember(Util.anonymousMemberDef("x", false, false), protoField(x));
+		newState.addMember(Util.anonymousMemberDef("body", false, false), protoField(body));
+		newState.addMember(Util.anonymousMemberDef("methodType", false, false), protoField(methodType));
+		
+		return initAndInstantiateState(Lambda.Lambda, newState);
+	}	
 	
 	/**
 	 * Constructs a new Application node using the given function and argument.
