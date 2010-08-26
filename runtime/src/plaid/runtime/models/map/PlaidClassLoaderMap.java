@@ -21,8 +21,10 @@ package plaid.runtime.models.map;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import plaid.runtime.PlaidClassLoader;
 import plaid.runtime.PlaidClassNotFoundException;
@@ -49,6 +51,7 @@ import plaid.runtime.utils.QualifiedIdentifier;
 public final class PlaidClassLoaderMap implements PlaidClassLoader {
 	private final HashMap<String, PlaidObject> singletons = new HashMap<String, PlaidObject>();
 	private final Object singletonsLock = new Object();
+	private final Set<String> nonExistingClasses = new HashSet<String>();
 	private final PlaidObject unit;
 
 	private static volatile PlaidClassLoaderMap loader = null;
@@ -138,11 +141,17 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 			
 			//lookup the QID in the package scope
 			PlaidObject value = loadClass(lookupInPackage.toString());
-			if (value != null) return value; //found an actual declaration
+			if (value != null) {
+				singletons.put(lookupInPackage.toString(), value);
+				return value; //found an actual declaration
+			}
 			
 			//lookup QID in the top level scope
 			PlaidObject topLevelValue = loadClass(lookupAtTopLevel.toString());
-			if (topLevelValue != null) return topLevelValue; //found an actual declaration
+			if (topLevelValue != null) {
+				singletons.put(lookupAtTopLevel.toString(), topLevelValue);
+				return topLevelValue; //found an actual declaration
+			}
 			
 			//otherwise, we need to return this lookup context
 			singletons.put(lookupAtTopLevel.toString(), lookup);
@@ -158,6 +167,10 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 				return singletons.get(name);
 			}
 			
+			if ( nonExistingClasses.contains(name) ) {
+				return null;
+			}
+			
 			// check if we can find the file 
 			ClassLoader cl = this.getClass().getClassLoader();
 		
@@ -169,6 +182,7 @@ public final class PlaidClassLoaderMap implements PlaidClassLoader {
 					return createPlaidObjectFromClass(new QualifiedIdentifier(current), obj);
 				} catch (ClassNotFoundException e) {
 					// If there is no classfile then we need to keep searching
+					nonExistingClasses.add(current);
 				}
 			}
 			return null;
