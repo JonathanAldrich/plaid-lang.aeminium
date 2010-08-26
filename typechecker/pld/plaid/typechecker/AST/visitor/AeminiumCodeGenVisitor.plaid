@@ -61,6 +61,30 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 		this.y = y;
 	}
 	
+	override method visitLambda(node) {
+		//this.out.setLocation(node.token);
+		java.lang.System.out.println("Generating code for a LAMBDA...");
+		val /* ID */ y = this.y;
+		
+		var /*ID*/ freshID = this.idgen.getId();
+		
+		this.out.assignToNewLambda(y.name, node.x.name);  //y = new lambda(...{ {
+		
+		this.out.declareVar(this.out.plaidObjectType, freshID.name);
+		this.y = freshID;
+		
+		val depVisitor = new DependencyVisitor;
+		depVisitor.visitLambda(node);
+		generateCode(node, depVisitor.nodeList);
+		
+		
+		val n = depVisitor.nodeList.size();
+		this.out.append("plaid.runtime.PlaidObject res = (plaid.runtime.PlaidObject) t" + n + ".getResult();");
+		this.out.append("return res;");
+		
+		this.out.closeAnonymousDeclaration(); //}});");
+	}
+	
 	override method visitMethodDecl(node) {
 		val newName = this.jCodeGen.convertOpNames(node.name);
 		java.lang.System.out.println("Generating code for method '" + newName + "'...");

@@ -121,6 +121,7 @@ state ASTTranslator {
 					val /*Token*/ token = root.getToken();
 					val /*ID*/ x = this.translateAST(root.getVar());
 					val /*Expression*/ body = this.translateAST(root.getBody());
+					val /*MethodTypeDecl*/ methodType = this.translateAST(root.getMethodType());
 				};
 			}
 			case plaid.compilerjava.AST.LetBinding {
