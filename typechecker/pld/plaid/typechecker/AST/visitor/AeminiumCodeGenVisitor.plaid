@@ -10,6 +10,9 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 		while { it.hasNext(); } {
 			val aemNode = it.next();
 			this.out.append("aeminium.runtime.Body b" + aemNode.num + " = new aeminium.runtime.Body() {");
+			this.out.append("public String toString(){");
+			this.out.append("return \\\"" + methodNode.name + "@" + aemNode.num + "\\\" ;");
+			this.out.append("}");
 			this.out.append("public void execute(aeminium.runtime.Runtime rt, aeminium.runtime.Task parent) {");
 			
 			val y = this.y;
