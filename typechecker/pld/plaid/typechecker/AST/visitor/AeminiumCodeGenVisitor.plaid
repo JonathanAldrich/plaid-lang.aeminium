@@ -17,7 +17,7 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			val aemNode = it.next();
 			this.out.append("aeminium.runtime.Body b" + aemNode.num + " = new aeminium.runtime.Body() {");
 			this.out.append("public String toString(){");
-			this.out.append("return \\\"" + methodNode.name + "@" + aemNode.num + "\\\" ;");
+			this.out.append("return \\\"" + name + "@" + aemNode.num + "\\\" ;");
 			this.out.append("}");
 			this.out.append("public void execute(aeminium.runtime.Runtime rt, aeminium.runtime.Task current) {");
 			
@@ -124,11 +124,6 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 		val depVisitor = new DependencyVisitor;
 		depVisitor.visitLambda(node);
 		generateCode(node, depVisitor.nodeList, "lambda");
-		
-		
-		val n = depVisitor.nodeList.size();
-		this.out.append("plaid.runtime.PlaidObject res = (plaid.runtime.PlaidObject) t" + n + ".getResult();");
-		this.out.append("return res;");
 		
 		this.out.closeAnonymousDeclaration(); //}});");
 	}

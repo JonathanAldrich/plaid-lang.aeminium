@@ -4,6 +4,8 @@ import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
 import static typechecker.tests.aeminium.AeminiumUtils.makeApplication;
 import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
 import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableString;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableDummyPermType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,14 +33,14 @@ public class ParallelTasksExample {
 		final PlaidObject x = TestUtils.id("x", uniqueInt);
 		
 		PlaidObject methodBody =
-			makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-				makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-					makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-						makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-							makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-								makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-									makeLet(makeApplication("f", "x", Perm.IMMUTABLE),
-											makeApplication("f", "x", Perm.IMMUTABLE))
+			makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(1)),
+				makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(2)),
+					makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(3)),
+						makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(4)),
+							makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(5)),
+								makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(6)),
+									makeLet(TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(7)),
+											TestUtils.application(TestUtils.id("f", immutableDummyPermType), AeminiumUtils.makeIntLiteral(8)))
 			))))));
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
@@ -78,20 +80,18 @@ public class ParallelTasksExample {
 		return methodDecl;
 	}
 	
-	public PlaidObject makePrintString(String toPrint) {
+	public PlaidObject makePrintString() {
 		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
 		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject s = TestUtils.id("s", dummyPermType);
 		
 		return
 			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("print", dummyPermType)),
-					makeLet(s, TestUtils.stringLiteral(toPrint),
-							   TestUtils.application(p2, s))));
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+						TestUtils.application(p2, TestUtils.id("fArg", immutableString))));
 	}
 	
 	public PlaidObject makeCalledMethodDecl(String name) {
-		PlaidObject body = makePrintString("");
+		PlaidObject body = makePrintString();
 		PlaidObject methodType = TestUtils.methodType(Util.string(name),
 				  									  dummyPermType,
 				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
