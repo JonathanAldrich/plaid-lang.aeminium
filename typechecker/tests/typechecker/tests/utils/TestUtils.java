@@ -222,6 +222,27 @@ public class TestUtils {
 		// instantiate the new prototype
 		return initAndInstantiateState(IntLiteral.IntLiteral, newState);
 	}
+	
+	/**
+	 * Constructs a new IntLiteral given an integer value and a permtype.
+	 * 
+	 * @param num The value of the IntLiteral AST node.
+	 * @param permType TODO
+	 * @return The newly created IntLiteral AST node.
+	 */
+	public static PlaidObject intLiteral(final int num, final PlaidObject permType) {
+		// create a new blank prototype
+		PlaidState newState = Util.newState();
+		
+		// add the necessary members to the new prototype
+		newState.addMember(Util.anonymousMemberDef("integer", false, false), 
+				protoField(Util.integer(num)));
+		newState.addMember(Util.anonymousMemberDef("permType", false, false),
+				protoField(permType));
+		
+		// instantiate the new prototype
+		return initAndInstantiateState(IntLiteral.IntLiteral, newState);
+	}
 
 	/**
 	 * Constructs a new StringLiteral given a string.

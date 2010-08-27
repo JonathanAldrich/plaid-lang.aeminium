@@ -43,4 +43,8 @@ public class AeminiumUtils {
 	public static PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
 		return makeLet(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
 	}
+	
+	public static PlaidObject makeIntLiteral(int num) {
+		return TestUtils.intLiteral(num, uniqueInt);
+	}
 }
