@@ -12,6 +12,44 @@ state ASTTranslator {
 		};
 		newList
 	}
+	
+	method translatePermission(root) {
+		// TODO: I'm not this is the correct way to translate this.
+		ifElse (root.equals(plaid.compilerjava.AST.Permission.FULL)) {
+			new FullPermission {
+				val /*Token*/ token = root.getToken();
+				val /*String*/ image = root.getImage();
+			};
+		} {
+			ifElse (root.equals(plaid.compilerjava.AST.Permission.IMMUTABLE)) {
+				new ImmutablePermission {
+					val /*Token*/ token = root.getToken();
+					val /*String*/ image = root.getImage();
+				};
+			} {
+				ifElse (root.equals(plaid.compilerjava.AST.Permission.PURE)) {
+					new PurePermission {
+						val /*Token*/ token = root.getToken();
+						val /*String*/ image = root.getImage();
+					};
+				} {
+					ifElse (root.equals(plaid.compilerjava.AST.Permission.UNIQUE)) {
+						new PurePermission {
+							val /*Token*/ token = root.getToken();
+							val /*String*/ image = root.getImage();
+						};
+					} {
+						if (root.equals(plaid.compilerjava.AST.Permission.SHARED)) {
+							new SharedPermission {
+								val /*Token*/ token = root.getToken();
+								val /*String*/ image = root.getImage();
+							};						
+						};
+					};
+				};
+			};
+		};
+	}
 
 	method translateAST(root) {
 		match(root) {
@@ -169,6 +207,15 @@ state ASTTranslator {
 					val /*State*/ st = this.translateAST(root.getSt());
 				};
 			}
+			case plaid.compilerjava.AST.Permission {
+				translatePermission(root);
+			}
+			case plaid.compilerjava.AST.PermType {
+				new PermType {
+					val /*Permission*/ perm = this.translateAST(root.getPermission());
+					val /*Type*/ type = this.translateAST(root.getType());
+				};
+			}
 			case plaid.compilerjava.AST.QI {
 				new QI with {
 					val /*Token*/ token = root.getToken();
@@ -200,6 +247,12 @@ state ASTTranslator {
 				new Throws with {
 					val /*Token*/ token = root.getToken();
 					val /*ID*/ throwableID = this.translateAST(root.getThrowableID());
+				};
+			}
+			case plaid.compilerjava.AST.Type {
+				new Type {
+					val typeAbbrevs = root.getTypeAbbrevs();
+					val typeDecls = root.getTypeDecls();
 				};
 			}
 			case plaid.compilerjava.AST.UnitLiteral {
