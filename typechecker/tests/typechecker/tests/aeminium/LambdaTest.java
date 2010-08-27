@@ -5,6 +5,7 @@ import static typechecker.tests.aeminium.AeminiumUtils.makeApplication;
 import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
 import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
 import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableDummyPermType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,7 @@ public class LambdaTest {
 			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
 				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
 					makeLet(s, TestUtils.stringLiteral("Inside Lambda"),
-							   TestUtils.application(p2, s))));
+							   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
 		
 		PlaidObject lambda = TestUtils.lambda(n, lambdaBody, lamMethodType);
 		
