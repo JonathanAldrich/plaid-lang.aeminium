@@ -60,6 +60,7 @@ state TypecheckerVisitor {
 	}
 
 	method visitUnannotatedLetBinding(node) {
+		java.lang.System.out.println("TypeChecker: visitLetBinding");
 		// Typecheck the bound expression
 		node.exp.accept(this);
 		val permType = this.returnedPermType;
@@ -379,6 +380,7 @@ state TypecheckerVisitor {
 	}
 	
 	method visitIntLiteral(node) {
+		java.lang.System.out.println("TypeChecker: visitIntLiteral");
 		// TODO: Get actual type of integers
 		this.returnedPermType = new PermType {
 			val perm = new UniquePermission;
