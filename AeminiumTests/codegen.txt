@@ -1,0 +1,58 @@
+Important:  This document is just considering "unique" and "immutable" for now
+and does not mention shared, data groups or related concepts at all.
+
+
+Consider a Plaid program P in A-normal form.  This program consists, by
+definition, of nested let expressions:
+
+E ::= let x_i = E in E | S.method(S) | new C(S) | S.field | S.field = S | ... 
+S ::= x_i
+
+Using the evaluation rules for let bindings, we can establish an ordering on
+the expressions the program consists of.   Example:
+
+Original program:
+	x = 42;
+	y = 23;
+	x + y;
+	x * y;
+
+A-normal form:
+	let x_1 = 42 in (let x_2 = 23 in (let x_3 = x_1.add(x_2) in x_1.mul(x_2)))
+
+Extracted expressions in program order:
+1.  x_1 = 42
+2.  x_2 = 23
+3.  x_3 = x_1.add(x_2)
+4.  x_1.mul(x_2)
+
+After the type checker has run, each of those expressions will have type
+annotations, in this case:
+	All variables will have the type "unique Integer".
+	
+	Expressions 3 and 4 only require immutable permissions to their arguments,
+	so they could be run in parallel.  This can be determined by the type
+	checker by looking at the types of add and mul and using the permission
+	split rule for unique.
+
+It is therefore a valid abstraction to think about such a Plaid program as an
+ordered list of expressions where each expression is associated with a list of
+variables and their access permissions.  Using the notation "U.x" to denote a
+unique permission to variable x and "I.y" to denote an immutable permission to
+y, our program can be viewed as:
+
+1.	U.x_1
+2.	U.x_2
+3.	U.x_3, I.x_1, I.x_2
+4.	I.x_1, I.x_2 
+
+Using a simple algorithm we can extract a dependency graph where each node
+represents an expression in the program.  Each node has directed edges pointing
+to the expressions it depends on.
+
+This representation of a Plaid program should be easily mappable to Aeminium's
+runtime system.  Each expression can be evaluated in a separate task with the
+graph providing the necessary dependency information.  The current runtime
+design is actually quite well suited for this because we are accessing all
+variables using a table lookup, so as long as the runtime is thread-safe in
+this respect, there shouldn't be any problems.

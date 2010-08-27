@@ -40,6 +40,11 @@ public abstract class AbstractASTVisitor implements ASTVisitor<ASTnode> {
 	public ASTnode visitNode(Assignment node) {
 		return visitHelper(node);
 	}
+
+	@Override
+	public ASTnode visitNode(Atomic node) {
+		return visitHelper(node);
+	}	
 	
 	@Override
 	public ASTnode visitNode(Case node) {
@@ -85,6 +90,11 @@ public abstract class AbstractASTVisitor implements ASTVisitor<ASTnode> {
 	public ASTnode visitNode(FieldTypeDecl node) {
 		return visitHelper(node);
 	}
+
+	@Override
+	public ASTnode visitNode(GroupDecl node) {
+		return visitHelper(node);
+	}
 	
 	@Override
 	public ASTnode visitNode(ID node) {
@@ -125,6 +135,11 @@ public abstract class AbstractASTVisitor implements ASTVisitor<ASTnode> {
 	public ASTnode visitNode(MethodTypeDecl node) {
 		return visitHelper(node);
 	}
+
+	@Override
+	public ASTnode visitNode(NewGroup node) {
+		return visitHelper(node);
+	}	
 	
 	@Override
 	public ASTnode visitNode(NewInstance node) {
@@ -145,6 +160,11 @@ public abstract class AbstractASTVisitor implements ASTVisitor<ASTnode> {
 	public ASTnode visitNode(QI node) {
 		return visitHelper(node);
 	}
+
+	@Override
+	public ASTnode visitNode(Share node) {
+		return visitHelper(node);
+	}	
 	
 	@Override
 	public ASTnode visitNode(State node) {

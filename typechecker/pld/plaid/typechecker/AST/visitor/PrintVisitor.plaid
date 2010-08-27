@@ -103,6 +103,9 @@ state PrintVisitor case of ASTVisitor {
 	
 	method visitID(node) {
 		this.output("ID(" + node.name + ")");
+		this.inc();
+		node.permType.accept(this);
+		this.dec();
 	}
 	
 	method visitImportList(node) {
@@ -175,6 +178,7 @@ state PrintVisitor case of ASTVisitor {
 	
 	method visitNewInstance(node) {
 		this.output("NewInstance");
+//		java.lang.System.out.println(node);
 		this.inc();
 		node.st.accept(this);
 		this.dec();
@@ -185,7 +189,29 @@ state PrintVisitor case of ASTVisitor {
 	}
 	
 	method visitPermType(node) {
-		this.output("PermType");
+		var s = "PermType: ";
+		
+		// TODO: Do proper dispatch
+		match (node.perm) {
+			case ImmutablePermission {
+				s = s + "immutable ";
+			}
+			case UniquePermission {
+				s = s + "unique ";
+			}
+		};
+		
+		ifElse (node.type.typeAbbrevs.isEmpty()) {
+			s = s + "<unknown>";
+		} {
+			val it = node.type.typeAbbrevs.iterator();
+			
+			while { it.hasNext(); } {
+				s = s + it.next().name;
+			};
+		};
+		
+		this.output(s);
 	}
 	
 	method visitQI(node) {
