@@ -1,7 +1,6 @@
 package typechecker.tests.aeminium;
 
 import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
-import static typechecker.tests.aeminium.AeminiumUtils.makeApplication;
 import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
 import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
 import static typechecker.tests.aeminium.AeminiumUtils.immutableString;
@@ -18,7 +17,6 @@ import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
-import typechecker.tests.aeminium.AeminiumUtils.Perm;
 import typechecker.tests.utils.TestUtils;
 
 public class ParallelTasksExample {
