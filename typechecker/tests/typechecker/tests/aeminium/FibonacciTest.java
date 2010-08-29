@@ -49,19 +49,19 @@ public class FibonacciTest {
 														 TestUtils.convertJavaListToPlaidList(lamTypes),
 														 TestUtils.convertJavaListToPlaidList(lamNames));
 
-//		PlaidObject ifBody = TestUtils.intLiteral(1);
-//		PlaidObject elseBody = TestUtils.intLiteral(2);
-		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
-		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject s = TestUtils.id("s", dummyPermType);
-		PlaidObject ifBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
-						makeLet(s, TestUtils.stringLiteral("Inside if block."),
-								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
-		PlaidObject elseBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
-						makeLet(s, TestUtils.stringLiteral("Inside else block."),
-								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
+		PlaidObject ifBody = TestUtils.intLiteral(1);
+		PlaidObject elseBody = TestUtils.intLiteral(2);
+//		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
+//		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
+//		PlaidObject s = TestUtils.id("s", dummyPermType);
+//		PlaidObject ifBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+//				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+//						makeLet(s, TestUtils.stringLiteral("Inside if block."),
+//								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
+//		PlaidObject elseBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+//				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+//						makeLet(s, TestUtils.stringLiteral("Inside else block."),
+//								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
 		
 		PlaidObject ifLambda = TestUtils.lambda(n, ifBody, lamMethodType);
 		PlaidObject elseLambda = TestUtils.lambda(n, elseBody, lamMethodType);
