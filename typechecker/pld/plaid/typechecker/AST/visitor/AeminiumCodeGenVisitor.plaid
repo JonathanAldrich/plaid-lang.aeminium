@@ -27,15 +27,15 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			val savedY = this.y;
 			aemNode.astRef.accept(this);
 			if (!it.hasNext()) {
-				// this.out.append("parent.setResult(" + savedY.name + ");");
-				this.out.append("current.setResult(new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42)));");
+				this.out.append("current.setResult(" + savedY.name + ");");
+				// this.out.append("current.setResult(new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42)));");
 			};
 			this.y = y;
 						
 			this.out.closeBlock();
 			this.out.append("};");
 			
-			this.out.append("aeminium.runtime.Task t" + aemNode.num + " = aeminium.runtime.implementations.Factory.getRuntime().");
+			this.out.append("final aeminium.runtime.Task t" + aemNode.num + " = aeminium.runtime.implementations.Factory.getRuntime().");
 			this.out.append("createNonBlockingTask(b" + aemNode.num + ", aeminium.runtime.Runtime.NO_HINTS);");
 			
 			val depIt = aemNode.dependencies.iterator();
@@ -51,12 +51,14 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			};
 		};
 		
+		val lastNodeNum = aemNodeList.size();
+		this.out.append("current.setResult(t" + lastNodeNum + ".getResult());");
 		
 		this.out.closeBlock();
 		this.out.append("};");
-		this.out.append("aeminium.runtime.Task t" + name + " = aeminium.runtime.implementations.Factory.getRuntime().");
+		this.out.append("final aeminium.runtime.Task t" + name + " = aeminium.runtime.implementations.Factory.getRuntime().");
 		this.out.append("createNonBlockingTask(b" + name + ", aeminium.runtime.Runtime.NO_HINTS);");
-		this.out.append("t" + name + ".setResult(new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42)));");
+		// this.out.append("t" + name + ".setResult(new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42)));");
 		this.out.append("return plaid.runtime.PlaidRuntime.getRuntime().getClassLoader().packJavaObject(t" + name + ");");
 	}
 	
@@ -185,13 +187,14 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 			this.y = freshReturn;
 			node.body.accept(this);
 			// this.out.append(freshReturn.name);
-
+			
+			this.out.append("current.setResult(" + freshReturn.name + ");");
 			this.out.closeBlock();
 			this.out.append("};");
 			this.out.append("aeminium.runtime.Task tMain = aeminium.runtime.implementations.Factory.getRuntime().");
 			this.out.append("createNonBlockingTask(bMain, aeminium.runtime.Runtime.NO_HINTS);");
 			this.out.append("aeminium.runtime.implementations.Factory.getRuntime().schedule(tMain, aeminium.runtime.Runtime.NO_PARENT, aeminium.runtime.Runtime.NO_DEPS);");
-			this.out.append("return new plaid.runtime.models.map.PlaidJavaObjectMap(new Integer(42));"); 
+			this.out.append("return (plaid.runtime.PlaidObject) tMain.getResult();"); 
 		} {
 			val depVisitor = new DependencyVisitor;
 			// We already know it's a method decl
