@@ -1,10 +1,9 @@
 package typechecker.tests.aeminium;
 
 import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
-import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
-import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
-import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
 import static typechecker.tests.aeminium.AeminiumUtils.immutableDummyPermType;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
+import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +18,7 @@ import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
 import typechecker.tests.utils.TestUtils;
 
-public class LambdaTest {
+public class FibonacciTest {
 	@BeforeClass
 	public static void beforeClass() {
 		// we need to do this so the Runtime doesn't deadlock if there are hooks into it
@@ -27,8 +26,18 @@ public class LambdaTest {
 		PlaidRuntime.getRuntime().setRuntimeState(RUNTIME_STATE.RUNNING);
 	}
 	
-	public PlaidObject makeTestMethodDecl() {
-		final PlaidObject x = TestUtils.id("x", uniqueInt);
+	
+	/*
+	 * 	method fibonacci(immutable Integer n) {
+	 * 		let t0 = (n.<=) in
+	 * 			let t1 = (t0 2) in
+	 * 				let t2 = { 1; } in
+	 * 					let t3 = { 2; } in
+	 * 						let t4 = (ifElse t1) in 
+	 * 							let t5 = (t4 t2) in (t5 t3)
+	 * 	}
+	 */
+	public PlaidObject makeFibonacciMethodDecl() {
 		final PlaidObject n = TestUtils.id("n", immutableInt);
 		
 		List<PlaidObject> lamTypes = new ArrayList<PlaidObject>();
@@ -40,38 +49,55 @@ public class LambdaTest {
 														 TestUtils.convertJavaListToPlaidList(lamTypes),
 														 TestUtils.convertJavaListToPlaidList(lamNames));
 
+//		PlaidObject ifBody = TestUtils.intLiteral(1);
+//		PlaidObject elseBody = TestUtils.intLiteral(2);
 		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
 		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
 		PlaidObject s = TestUtils.id("s", dummyPermType);
-		
-		PlaidObject lambdaBody = 
-			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+		PlaidObject ifBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
 				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
-					makeLet(s, TestUtils.stringLiteral("Inside Lambda"),
-							   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
+						makeLet(s, TestUtils.stringLiteral("Inside if block."),
+								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
+		PlaidObject elseBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+						makeLet(s, TestUtils.stringLiteral("Inside else block."),
+								   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
 		
-		PlaidObject lambda = TestUtils.lambda(n, lambdaBody, lamMethodType);
+		PlaidObject ifLambda = TestUtils.lambda(n, ifBody, lamMethodType);
+		PlaidObject elseLambda = TestUtils.lambda(n, elseBody, lamMethodType);
 		
-		PlaidObject methodBody = 
-			makeLet(TestUtils.id("t0", dummyPermType), lambda,
-					TestUtils.application(TestUtils.id("t0", dummyPermType),
-										  TestUtils.intLiteral(42)));
-					
+		
+		final PlaidObject t0 = TestUtils.id("t0", dummyPermType);
+		final PlaidObject t1 = TestUtils.id("t1", dummyPermType);
+		final PlaidObject t2 = TestUtils.id("t2", dummyPermType);
+		final PlaidObject t3 = TestUtils.id("t3", dummyPermType);
+		final PlaidObject t4 = TestUtils.id("t4", dummyPermType);
+		final PlaidObject t5 = TestUtils.id("t5", dummyPermType);
+		
+		PlaidObject methodBody =
+			TestUtils.let(t0, TestUtils.dereference(n, TestUtils.id("<=", dummyPermType)),
+				TestUtils.let(t1, TestUtils.application(t0, TestUtils.intLiteral(2)),
+					TestUtils.let(t2, ifLambda,
+						TestUtils.let(t3, elseLambda,
+							TestUtils.let(t4, TestUtils.application(TestUtils.id("ifElse", dummyPermType), t1),
+								TestUtils.let(t5, TestUtils.application(t4, t2),
+												  TestUtils.application(t5, t3)))))));
+		
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
-		argTypes.add(uniqueInt);
+		argTypes.add(immutableInt);
 		
 		List<PlaidObject> argNames = new ArrayList<PlaidObject>();
-		argNames.add(x);
+		argNames.add(n);
 
-		PlaidObject methodType = TestUtils.methodType(Util.string("compute"),
+		PlaidObject methodType = TestUtils.methodType(Util.string("fibonacci"),
 													  dummyPermType,
 													  TestUtils.convertJavaListToPlaidList(argTypes),
 													  TestUtils.convertJavaListToPlaidList(argNames));
 		
-		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("compute"),
+		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("fibonacci"),
 													  methodBody,
-													  x,
+													  n,
 													  Util.falseObject(),
 													  methodType);
 		
@@ -79,7 +105,8 @@ public class LambdaTest {
 	}
 	
 	public PlaidObject makeMainMethodDecl() {
-		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", dummyPermType), TestUtils.unitLiteral());
+		PlaidObject fibArg = TestUtils.intLiteral(1);
+		PlaidObject mainBody = TestUtils.application(TestUtils.id("fibonacci", dummyPermType), fibArg);
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("main"),
 													  dummyPermType,
@@ -101,11 +128,11 @@ public class LambdaTest {
 		
 		List<String> packageName = new ArrayList<String>();
 		packageName.add("aeminiumTests");
-		packageName.add("lambdaTest");
+		packageName.add("fibonacciTest");
 		
 		List<PlaidObject> decls = new ArrayList<PlaidObject>();
 		decls.add(makeMainMethodDecl());
-		decls.add(makeTestMethodDecl());
+		decls.add(makeFibonacciMethodDecl());
 		
 		return TestUtils.compilationUnit(decls, packageName, imports);
 	}
@@ -116,9 +143,6 @@ public class LambdaTest {
 
 		PlaidObject printer = TestUtils.printVisitor();
 		Util.call(Util.lookup("visitCompilationUnit", printer), cu);
-		
-//		PlaidObject plaidCodeGen = TestUtils.plaidCodeGenVisitor();
-//		Util.call(Util.lookup("visitCompilationUnit", plaidCodeGen), cu);
 		
 		PlaidObject aemCodeGen = TestUtils.aeminiumCodeGenVisitor();
 		Util.call(Util.lookup("visitCompilationUnit", aemCodeGen), cu);
