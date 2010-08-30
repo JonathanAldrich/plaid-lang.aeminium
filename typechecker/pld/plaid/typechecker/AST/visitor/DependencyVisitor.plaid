@@ -8,6 +8,7 @@ state DependencyVisitor case of LeafVisitor {
 	
 	var counter = 0;
 	var insideFunctionBlock = false;
+	var lambdaCount = 0;
 	
 	method permToString(perm) {
 		match (perm) {
@@ -82,6 +83,7 @@ state DependencyVisitor case of LeafVisitor {
 	
 	override method visitLambda(node) {
 		if (!this.insideFunctionBlock) {
+			this.lambdaCount = this.lambdaCount + 1;
 			this.insideFunctionBlock = true;
 			this.nodeList = java.util.ArrayList.new();
 		
@@ -97,7 +99,7 @@ state DependencyVisitor case of LeafVisitor {
 				this.nodeList.add(makeAeminiumNode(varSet, node.body));
 			};
 		
-			handleDependencies("LAMBDA");
+			handleDependencies("Lambda" + this.lambdaCount);
 		
 			this.insideFunctionBlock = false;
 		};

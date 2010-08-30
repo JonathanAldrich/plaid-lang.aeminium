@@ -16,6 +16,7 @@ import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
+import plaid.runtime.models.map.PlaidLookupMap;
 import typechecker.tests.utils.TestUtils;
 
 public class FibonacciTest {
@@ -54,10 +55,20 @@ public class FibonacciTest {
 		
 		final PlaidObject r0 = TestUtils.id("r0", dummyPermType);
 		final PlaidObject r1 = TestUtils.id("r1", dummyPermType);
+		final PlaidObject r2 = TestUtils.id("r2", dummyPermType);
+		final PlaidObject r3 = TestUtils.id("r3", dummyPermType);
+		final PlaidObject r4 = TestUtils.id("r4", dummyPermType);
+		final PlaidObject r5 = TestUtils.id("r5", dummyPermType);
+		final PlaidObject r6 = TestUtils.id("r6", dummyPermType);
 		PlaidObject elseBody =
-			TestUtils.let(r0, TestUtils.dereference(n, TestUtils.id("-", dummyPermType)),
+			TestUtils.let(r0, TestUtils.dereference(n, TestUtils.id("-", immutableDummyPermType)),
 				TestUtils.let(r1, TestUtils.application(r0, TestUtils.intLiteral(1)),
-					TestUtils.application(TestUtils.id("fibonacci", dummyPermType), r1)));
+					TestUtils.let(r2, TestUtils.application(TestUtils.id("fibonacci", immutableDummyPermType), r1),
+						TestUtils.let(r3, TestUtils.dereference(n, TestUtils.id("-", immutableDummyPermType)),
+							TestUtils.let(r4, TestUtils.application(r3, TestUtils.intLiteral(2)),
+								TestUtils.let(r5, TestUtils.application(TestUtils.id("fibonacci", immutableDummyPermType), r4),
+									TestUtils.let(r6, TestUtils.dereference(r2, TestUtils.id("+", immutableDummyPermType)),
+													  TestUtils.application(r6, r5))))))));
 		
 		
 		PlaidObject ifLambda = TestUtils.lambda(x, ifBody, lamMethodType);
@@ -102,16 +113,21 @@ public class FibonacciTest {
 	}
 	
 	public PlaidObject makePrintMethodDecl() {
-		PlaidObject fibArg = TestUtils.intLiteral(5);
+		PlaidObject fibArg = TestUtils.intLiteral(6);
 		
 		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
 		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject x = TestUtils.id("x", dummyPermType);		
-		PlaidObject printArg = TestUtils.application(TestUtils.id("fibonacci", dummyPermType), fibArg);
-		PlaidObject methodBody = makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
+		PlaidObject x = TestUtils.id("x", dummyPermType);
+		PlaidObject f = TestUtils.id("f", dummyPermType);
+		
+		PlaidObject printArg = TestUtils.application(TestUtils.id("fibonacci", dummyPermType), f);
+		
+		PlaidObject methodBody =
+			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
 				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+					makeLet(f, fibArg,
 						makeLet(x, printArg,
-								   TestUtils.application(p2, x))));
+								   TestUtils.application(p2, x)))));
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("printResult"),
 													  dummyPermType,
