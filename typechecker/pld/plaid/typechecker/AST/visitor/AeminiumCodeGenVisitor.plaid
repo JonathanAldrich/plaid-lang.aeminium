@@ -4,6 +4,8 @@ import plaid.typechecker.AST.*;
 import plaid.typechecker.util.*;
 
 state AeminiumCodeGenVisitor case of CodeGenVisitor {
+	var lambdaCount = 0;
+	
 	method generateCode(methodNode, aemNodeList, name) {
 		this.out.append("aeminium.runtime.Body b" + name + " = new aeminium.runtime.Body() {");
 		this.out.append("public String toString(){");
@@ -113,7 +115,8 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 	
 	override method visitLambda(node) {
 		//this.out.setLocation(node.token);
-		java.lang.System.out.println("Generating code for a LAMBDA...");
+		this.lambdaCount = this.lambdaCount + 1;
+		java.lang.System.out.println("Generating code for Lambda" + this.lambdaCount + "...");
 		val /* ID */ y = this.y;
 		
 		var /*ID*/ freshID = this.idgen.getId();
@@ -125,7 +128,7 @@ state AeminiumCodeGenVisitor case of CodeGenVisitor {
 		
 		val depVisitor = new DependencyVisitor;
 		depVisitor.visitLambda(node);
-		generateCode(node, depVisitor.nodeList, "lambda");
+		generateCode(node, depVisitor.nodeList, "lambda" + this.lambdaCount);
 		
 		this.out.closeAnonymousDeclaration(); //}});");
 	}
