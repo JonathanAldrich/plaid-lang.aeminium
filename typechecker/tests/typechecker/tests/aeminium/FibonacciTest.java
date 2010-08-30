@@ -18,6 +18,8 @@ import static typechecker.tests.aeminium.AeminiumUtils.immutableDontCare;
 import static typechecker.tests.aeminium.AeminiumUtils.uniqueDontCare;
 
 public class FibonacciTest {
+	private static final int FIBONACCI_ARG = 10;
+	
 	public static PlaidObject read(String varName) {
 		return TestUtils.id(varName, immutableDontCare);
 	}
@@ -140,12 +142,10 @@ public class FibonacciTest {
 	}
 	
 	public PlaidObject makePrintMethodDecl() {
-		PlaidObject fibArg = TestUtils.intLiteral(11);
-		
 		PlaidObject methodBody =
 			TestUtils.let(write("p1"), TestUtils.dereference(read("System"), read("out")),
 				TestUtils.let(write("p2"), TestUtils.dereference(read("p1"), read("println")),
-					TestUtils.let(write("f"), fibArg,
+					TestUtils.let(write("f"), TestUtils.intLiteral(FIBONACCI_ARG),
 						TestUtils.let(write("x"), TestUtils.application(read("fibonacci"), read("f")),
 										 TestUtils.application(read("p2"), read("x"))))));
 		
