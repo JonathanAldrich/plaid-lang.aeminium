@@ -9,9 +9,9 @@ public class AeminiumUtils {
 		IMMUTABLE
 	}
 	
-	public static final PlaidObject dummyType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
-	public static final PlaidObject dummyPermType = TestUtils.permtype(TestUtils.unique(), dummyType);
-	public static final PlaidObject immutableDummyPermType = TestUtils.permtype(TestUtils.immutable(), dummyType);
+	public static final PlaidObject dontCareType = TestUtils.type(new PlaidObject[0], new PlaidObject[0]);
+	public static final PlaidObject uniqueDontCare = TestUtils.permtype(TestUtils.unique(), dontCareType);
+	public static final PlaidObject immutableDontCare = TestUtils.permtype(TestUtils.immutable(), dontCareType);
 	// TODO: Why is this broken?  Doesn't matter right now because we only care about the permission.
 	// final PlaidObject intType = TestUtils.getStructuralTypeFromAbbrev("Integer");
 	public static final PlaidObject intType = TestUtils.type(new PlaidObject[] { TestUtils.id("Integer") }, new PlaidObject[0]);
@@ -24,7 +24,7 @@ public class AeminiumUtils {
 	
 	
 	public static PlaidObject makeApplication(String function, String arg, Perm perm) {
-		PlaidObject foo = TestUtils.id(function, immutableDummyPermType);
+		PlaidObject foo = TestUtils.id(function, immutableDontCare);
 		
 		PlaidObject permType;
 		if (perm == Perm.UNIQUE)
@@ -41,7 +41,7 @@ public class AeminiumUtils {
 	}
 	
 	public static PlaidObject makeLet(PlaidObject exp, PlaidObject body) {
-		return makeLet(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, dummyPermType), exp, body);
+		return makeLet(TestUtils.id("tmp" + varCounter++/* + "$plaid"*/, uniqueDontCare), exp, body);
 	}
 	
 	public static PlaidObject makeIntLiteral(int num) {

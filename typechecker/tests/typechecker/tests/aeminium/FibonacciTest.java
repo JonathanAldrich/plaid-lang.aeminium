@@ -1,10 +1,5 @@
 package typechecker.tests.aeminium;
 
-import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
-import static typechecker.tests.aeminium.AeminiumUtils.immutableDummyPermType;
-import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
-import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,10 +11,21 @@ import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
 import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
-import plaid.runtime.models.map.PlaidLookupMap;
 import typechecker.tests.utils.TestUtils;
 
+import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableDontCare;
+import static typechecker.tests.aeminium.AeminiumUtils.uniqueDontCare;
+
 public class FibonacciTest {
+	public static PlaidObject read(String varName) {
+		return TestUtils.id(varName, immutableDontCare);
+	}
+	
+	public static PlaidObject write(String varName) {
+		return TestUtils.id(varName, uniqueDontCare);
+	}
+	
 	@BeforeClass
 	public static void beforeClass() {
 		// we need to do this so the Runtime doesn't deadlock if there are hooks into it
@@ -27,69 +33,90 @@ public class FibonacciTest {
 		PlaidRuntime.getRuntime().setRuntimeState(RUNTIME_STATE.RUNNING);
 	}
 	
+	/*
+	 * 	IfLambda = {
+	 * 		1;
+	 * 	}
+	 */
+	public PlaidObject makeIfLambda() {
+		final PlaidObject x = TestUtils.id("x", immutableDontCare);
+		
+		List<PlaidObject> lamTypes = new ArrayList<PlaidObject>();
+		lamTypes.add(immutableDontCare);
+		List<PlaidObject> lamNames = new ArrayList<PlaidObject>();
+		lamNames.add(x);
+		
+		PlaidObject lamMethodType = TestUtils.methodType(Util.string("IfLambda"), uniqueDontCare,
+														 TestUtils.convertJavaListToPlaidList(lamTypes),
+														 TestUtils.convertJavaListToPlaidList(lamNames));
+
+		PlaidObject ifBody = TestUtils.intLiteral(1);
+		
+		return TestUtils.lambda(x, ifBody, lamMethodType);
+	}
+	
+	/*
+	 * 	ElseLambda = {
+	 * 		let r0 = (n.-) in
+	 * 			let r1 = (r0 1) in
+	 * 				let r2 = (fibonacci r1) in
+	 * 					let r3 = (n.-) in
+	 * 						let r4 = (r3 2) in
+	 * 							let r5 = (fibonacci r4) in
+	 * 								let r6 = (r2.+) in (r6 r5)
+	 * 	}
+	 */
+	public PlaidObject makeElseLambda() {
+		final PlaidObject x = TestUtils.id("x", immutableDontCare);
+		final PlaidObject n = TestUtils.id("n", immutableInt);
+		
+		List<PlaidObject> lamTypes = new ArrayList<PlaidObject>();
+		lamTypes.add(immutableDontCare);
+		List<PlaidObject> lamNames = new ArrayList<PlaidObject>();
+		lamNames.add(x);
+		
+		PlaidObject lamMethodType = TestUtils.methodType(Util.string("ElseLambda"), uniqueDontCare,
+														 TestUtils.convertJavaListToPlaidList(lamTypes),
+														 TestUtils.convertJavaListToPlaidList(lamNames));
+
+		PlaidObject elseBody =
+			TestUtils.let(write("r0"), TestUtils.dereference(n, read("-")),
+				TestUtils.let(write("r1"), TestUtils.application(read("r0"), TestUtils.intLiteral(1)),
+					TestUtils.let(write("r2"), TestUtils.application(read("fibonacci"), read("r1")),
+						TestUtils.let(write("r3"), TestUtils.dereference(n, read("-")),
+							TestUtils.let(write("r4"), TestUtils.application(read("r3"), TestUtils.intLiteral(2)),
+								TestUtils.let(write("r5"), TestUtils.application(read("fibonacci"), read("r4")),
+									TestUtils.let(write("r6"), TestUtils.dereference(read("r2"), read("+")),
+													  TestUtils.application(read("r6"), read("r5")))))))));
+		
+		
+		return TestUtils.lambda(x, elseBody, lamMethodType);		
+	}
 	
 	/*
 	 * 	method fibonacci(immutable Integer n) {
 	 * 		let t0 = (n.<=) in
 	 * 			let t1 = (t0 2) in
-	 * 				let t2 = { 1; } in
-	 * 					let t3 = { 2; } in
+	 * 				let t2 = $IfLambda in
+	 * 					let t3 = $ElseLambda in
 	 * 						let t4 = (ifElse t1) in 
 	 * 							let t5 = (t4 t2) in (t5 t3)
 	 * 	}
 	 */
 	public PlaidObject makeFibonacciMethodDecl() {
 		final PlaidObject n = TestUtils.id("n", immutableInt);
-		final PlaidObject x = TestUtils.id("x", dummyPermType);
-		
-		List<PlaidObject> lamTypes = new ArrayList<PlaidObject>();
-		lamTypes.add(immutableInt);
-		List<PlaidObject> lamNames = new ArrayList<PlaidObject>();
-		lamNames.add(x);
-		
-		PlaidObject lamMethodType = TestUtils.methodType(Util.string("<LAMBDA>"), dummyPermType,
-														 TestUtils.convertJavaListToPlaidList(lamTypes),
-														 TestUtils.convertJavaListToPlaidList(lamNames));
 
-		PlaidObject ifBody = TestUtils.intLiteral(1);
-		
-		final PlaidObject r0 = TestUtils.id("r0", dummyPermType);
-		final PlaidObject r1 = TestUtils.id("r1", dummyPermType);
-		final PlaidObject r2 = TestUtils.id("r2", dummyPermType);
-		final PlaidObject r3 = TestUtils.id("r3", dummyPermType);
-		final PlaidObject r4 = TestUtils.id("r4", dummyPermType);
-		final PlaidObject r5 = TestUtils.id("r5", dummyPermType);
-		final PlaidObject r6 = TestUtils.id("r6", dummyPermType);
-		PlaidObject elseBody =
-			TestUtils.let(r0, TestUtils.dereference(n, TestUtils.id("-", immutableDummyPermType)),
-				TestUtils.let(r1, TestUtils.application(r0, TestUtils.intLiteral(1)),
-					TestUtils.let(r2, TestUtils.application(TestUtils.id("fibonacci", immutableDummyPermType), r1),
-						TestUtils.let(r3, TestUtils.dereference(n, TestUtils.id("-", immutableDummyPermType)),
-							TestUtils.let(r4, TestUtils.application(r3, TestUtils.intLiteral(2)),
-								TestUtils.let(r5, TestUtils.application(TestUtils.id("fibonacci", immutableDummyPermType), r4),
-									TestUtils.let(r6, TestUtils.dereference(r2, TestUtils.id("+", immutableDummyPermType)),
-													  TestUtils.application(r6, r5))))))));
-		
-		
-		PlaidObject ifLambda = TestUtils.lambda(x, ifBody, lamMethodType);
-		PlaidObject elseLambda = TestUtils.lambda(x, elseBody, lamMethodType);
-		
-		
-		final PlaidObject t0 = TestUtils.id("t0", dummyPermType);
-		final PlaidObject t1 = TestUtils.id("t1", dummyPermType);
-		final PlaidObject t2 = TestUtils.id("t2", dummyPermType);
-		final PlaidObject t3 = TestUtils.id("t3", dummyPermType);
-		final PlaidObject t4 = TestUtils.id("t4", dummyPermType);
-		final PlaidObject t5 = TestUtils.id("t5", dummyPermType);
+		final PlaidObject ifLambda = makeIfLambda();
+		final PlaidObject elseLambda = makeElseLambda();
 		
 		PlaidObject methodBody =
-			TestUtils.let(t0, TestUtils.dereference(n, TestUtils.id("<=", dummyPermType)),
-				TestUtils.let(t1, TestUtils.application(t0, TestUtils.intLiteral(2)),
-					TestUtils.let(t2, ifLambda,
-						TestUtils.let(t3, elseLambda,
-							TestUtils.let(t4, TestUtils.application(TestUtils.id("ifElse", dummyPermType), t1),
-								TestUtils.let(t5, TestUtils.application(t4, t2),
-												  TestUtils.application(t5, t3)))))));
+			TestUtils.let(write("t0"), TestUtils.dereference(n, read("<=")),
+				TestUtils.let(write("t1"), TestUtils.application(read("t0"), TestUtils.intLiteral(2)),
+					TestUtils.let(write("t2"), ifLambda,
+						TestUtils.let(write("t3"), elseLambda,
+							TestUtils.let(write("t4"), TestUtils.application(read("ifElse"), read("t1")),
+								TestUtils.let(write("t5"), TestUtils.application(read("t4"), read("t2")),
+												  TestUtils.application(read("t5"), read("t3"))))))));
 		
 		
 		List<PlaidObject> argTypes = new ArrayList<PlaidObject>();
@@ -99,7 +126,7 @@ public class FibonacciTest {
 		argNames.add(n);
 
 		PlaidObject methodType = TestUtils.methodType(Util.string("fibonacci"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(argTypes),
 													  TestUtils.convertJavaListToPlaidList(argNames));
 		
@@ -113,30 +140,23 @@ public class FibonacciTest {
 	}
 	
 	public PlaidObject makePrintMethodDecl() {
-		PlaidObject fibArg = TestUtils.intLiteral(6);
-		
-		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
-		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject x = TestUtils.id("x", dummyPermType);
-		PlaidObject f = TestUtils.id("f", dummyPermType);
-		
-		PlaidObject printArg = TestUtils.application(TestUtils.id("fibonacci", dummyPermType), f);
+		PlaidObject fibArg = TestUtils.intLiteral(11);
 		
 		PlaidObject methodBody =
-			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
-					makeLet(f, fibArg,
-						makeLet(x, printArg,
-								   TestUtils.application(p2, x)))));
+			TestUtils.let(write("p1"), TestUtils.dereference(read("System"), read("out")),
+				TestUtils.let(write("p2"), TestUtils.dereference(read("p1"), read("println")),
+					TestUtils.let(write("f"), fibArg,
+						TestUtils.let(write("x"), TestUtils.application(read("fibonacci"), read("f")),
+										 TestUtils.application(read("p2"), read("x"))))));
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("printResult"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
 		
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("printResult"),
 													  methodBody,
-													  TestUtils.id("printResultArg", dummyPermType),
+													  TestUtils.id("printResultArg", uniqueDontCare),
 													  Util.falseObject(),
 													  methodType);
 		
@@ -144,16 +164,16 @@ public class FibonacciTest {
 	}
 	
 	public PlaidObject makeMainMethodDecl() {
-		PlaidObject mainBody = TestUtils.application(TestUtils.id("printResult", dummyPermType), TestUtils.unitLiteral());
+		PlaidObject mainBody = TestUtils.application(TestUtils.id("printResult", uniqueDontCare), TestUtils.unitLiteral());
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("main"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
 		
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("main"),
 													  mainBody,
-													  TestUtils.id("mainArg", dummyPermType),
+													  TestUtils.id("mainArg", uniqueDontCare),
 													  Util.falseObject(),
 													  methodType);
 		
@@ -179,7 +199,7 @@ public class FibonacciTest {
 	@Test
 	public void codeGenTest() {
 		PlaidObject cu = makeCompilationUnit();
-
+		
 		PlaidObject printer = TestUtils.printVisitor();
 		Util.call(Util.lookup("visitCompilationUnit", printer), cu);
 		
