@@ -1,10 +1,10 @@
 package typechecker.tests.aeminium;
 
-import static typechecker.tests.aeminium.AeminiumUtils.dummyPermType;
+import static typechecker.tests.aeminium.AeminiumUtils.uniqueDontCare;
 import static typechecker.tests.aeminium.AeminiumUtils.makeLet;
 import static typechecker.tests.aeminium.AeminiumUtils.uniqueInt;
 import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
-import static typechecker.tests.aeminium.AeminiumUtils.immutableDummyPermType;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableDontCare;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,25 +36,25 @@ public class LambdaTest {
 		List<PlaidObject> lamNames = new ArrayList<PlaidObject>();
 		lamNames.add(n);
 		
-		PlaidObject lamMethodType = TestUtils.methodType(Util.string("<LAMBDA>"), dummyPermType,
+		PlaidObject lamMethodType = TestUtils.methodType(Util.string("<LAMBDA>"), uniqueDontCare,
 														 TestUtils.convertJavaListToPlaidList(lamTypes),
 														 TestUtils.convertJavaListToPlaidList(lamNames));
 
-		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
-		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject s = TestUtils.id("s", dummyPermType);
+		PlaidObject p1 = TestUtils.id("p1", uniqueDontCare);
+		PlaidObject p2 = TestUtils.id("p2", uniqueDontCare);
+		PlaidObject s = TestUtils.id("s", uniqueDontCare);
 		
 		PlaidObject lambdaBody = 
-			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+			makeLet(p1, TestUtils.dereference(TestUtils.id("System", uniqueDontCare), TestUtils.id("out", uniqueDontCare)),
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", uniqueDontCare)),
 					makeLet(s, TestUtils.stringLiteral("Inside Lambda"),
-							   TestUtils.application(p2, TestUtils.id("s", immutableDummyPermType)))));
+							   TestUtils.application(p2, TestUtils.id("s", immutableDontCare)))));
 		
 		PlaidObject lambda = TestUtils.lambda(n, lambdaBody, lamMethodType);
 		
 		PlaidObject methodBody = 
-			makeLet(TestUtils.id("t0", dummyPermType), lambda,
-					TestUtils.application(TestUtils.id("t0", dummyPermType),
+			makeLet(TestUtils.id("t0", uniqueDontCare), lambda,
+					TestUtils.application(TestUtils.id("t0", uniqueDontCare),
 										  TestUtils.intLiteral(42)));
 					
 		
@@ -65,7 +65,7 @@ public class LambdaTest {
 		argNames.add(x);
 
 		PlaidObject methodType = TestUtils.methodType(Util.string("compute"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(argTypes),
 													  TestUtils.convertJavaListToPlaidList(argNames));
 		
@@ -79,16 +79,16 @@ public class LambdaTest {
 	}
 	
 	public PlaidObject makeMainMethodDecl() {
-		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", dummyPermType), TestUtils.unitLiteral());
+		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", uniqueDontCare), TestUtils.unitLiteral());
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("main"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
 		
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("main"),
 													  mainBody,
-													  TestUtils.id("mainArg", dummyPermType),
+													  TestUtils.id("mainArg", uniqueDontCare),
 													  Util.falseObject(),
 													  methodType);
 		

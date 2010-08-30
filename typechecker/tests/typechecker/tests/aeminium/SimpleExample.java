@@ -43,7 +43,7 @@ public class SimpleExample {
 		argNames.add(x);
 
 		PlaidObject methodType = TestUtils.methodType(Util.string("compute"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(argTypes),
 													  TestUtils.convertJavaListToPlaidList(argNames));
 		
@@ -57,16 +57,16 @@ public class SimpleExample {
 	}
 	
 	public PlaidObject makeMainMethodDecl() {
-		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", dummyPermType), TestUtils.unitLiteral());
+		PlaidObject mainBody = TestUtils.application(TestUtils.id("compute", uniqueDontCare), TestUtils.unitLiteral());
 		
 		PlaidObject methodType = TestUtils.methodType(Util.string("main"),
-													  dummyPermType,
+													  uniqueDontCare,
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
 													  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
 		
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string("main"),
 													  mainBody,
-													  TestUtils.id("mainArg", dummyPermType),
+													  TestUtils.id("mainArg", uniqueDontCare),
 													  Util.falseObject(),
 													  methodType);
 		
@@ -74,13 +74,13 @@ public class SimpleExample {
 	}
 	
 	public PlaidObject makePrintString(String toPrint) {
-		PlaidObject p1 = TestUtils.id("p1", dummyPermType);
-		PlaidObject p2 = TestUtils.id("p2", dummyPermType);
-		PlaidObject s = TestUtils.id("s", dummyPermType);
+		PlaidObject p1 = TestUtils.id("p1", uniqueDontCare);
+		PlaidObject p2 = TestUtils.id("p2", uniqueDontCare);
+		PlaidObject s = TestUtils.id("s", uniqueDontCare);
 		
 		return
-			makeLet(p1, TestUtils.dereference(TestUtils.id("System", dummyPermType), TestUtils.id("out", dummyPermType)),
-				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", dummyPermType)),
+			makeLet(p1, TestUtils.dereference(TestUtils.id("System", uniqueDontCare), TestUtils.id("out", uniqueDontCare)),
+				makeLet(p2, TestUtils.dereference(p1, TestUtils.id("println", uniqueDontCare)),
 					makeLet(s, TestUtils.stringLiteral(toPrint),
 							   TestUtils.application(p2, s))));
 	}
@@ -88,13 +88,13 @@ public class SimpleExample {
 	public PlaidObject makeCalledMethodDecl(String name) {
 		PlaidObject body = makePrintString("I'm currently inside '" + name + "'!");
 		PlaidObject methodType = TestUtils.methodType(Util.string(name),
-				  									  dummyPermType,
+				  									  uniqueDontCare,
 				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()),
 				  									  TestUtils.convertJavaListToPlaidList(new ArrayList<PlaidObject>()));
 
 		PlaidObject methodDecl = TestUtils.methodDecl(Util.string(name),
 				  									  body,
-				  									  TestUtils.id(name + "Arg", dummyPermType),
+				  									  TestUtils.id(name + "Arg", uniqueDontCare),
 				  									  Util.falseObject(),
 				  									  methodType);
 
