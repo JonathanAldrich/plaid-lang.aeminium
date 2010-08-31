@@ -1,8 +1,13 @@
 package typechecker.tests.aeminium;
 
+import static typechecker.tests.aeminium.AeminiumUtils.immutableDontCare;
+import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
+import static typechecker.tests.aeminium.AeminiumUtils.uniqueDontCare;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -10,15 +15,10 @@ import plaid.compilerjava.util.QualifiedID;
 import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntime;
 import plaid.runtime.Util;
-import plaid.runtime.PlaidRuntimeState.RUNTIME_STATE;
 import typechecker.tests.utils.TestUtils;
 
-import static typechecker.tests.aeminium.AeminiumUtils.immutableInt;
-import static typechecker.tests.aeminium.AeminiumUtils.immutableDontCare;
-import static typechecker.tests.aeminium.AeminiumUtils.uniqueDontCare;
-
 public class FibonacciTest {
-	private static final int FIBONACCI_ARG = 10;
+	private static final int FIBONACCI_ARG = 25;
 	
 	public static PlaidObject read(String varName) {
 		return TestUtils.id(varName, immutableDontCare);
@@ -30,9 +30,12 @@ public class FibonacciTest {
 	
 	@BeforeClass
 	public static void beforeClass() {
-		// we need to do this so the Runtime doesn't deadlock if there are hooks into it
-		// (e.g. in debug mode)
-		PlaidRuntime.getRuntime().setRuntimeState(RUNTIME_STATE.RUNNING);
+		PlaidRuntime.getRuntime().init();
+	}
+	
+	@AfterClass
+	public static void afterClass() {
+		PlaidRuntime.getRuntime().shutdown();
 	}
 	
 	/*
