@@ -1,6 +1,6 @@
 package plaid.typechecker.AST;
 
-state ID case of ASTNode {
+state ID case of Expression {
 	val /*Token*/ token;
 	val /*String*/ name;
 	
@@ -9,7 +9,14 @@ state ID case of ASTNode {
 	}
 	
 	method ==(other) {
-		this.name.equals(other.name);
+		match (other) {
+			case ID {
+				this.name.equals(other.name);
+			}
+			default {
+				false;
+			}
+		};
 	}
 	
 	method hashCode() {
