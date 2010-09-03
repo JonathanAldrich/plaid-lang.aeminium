@@ -1,0 +1,51 @@
+PlaidRuntime:
+	- Implemented thread-safe singleton
+	- event and state are independent, so they can be protected by different locks
+
+
+Both PlaidLocalScopeMap and PlaidGlobalScopeMap:
+	- Problems on the Java side of things only occur when there are multiple interfering accesses to the same variable,
+	  e.g. update("x", value1) and update("x", value2) at the same time.  This causes problems even if the underlying
+	  data structure is concurrent as code like
+	  	if (this.mutableScopeMap.containsKey(name))	
+			return this.mutableScopeMap.get(name);
+	  can return null (if another thread calls mutableScopeMap.remove(name) before the execution of the second line)
+	- BUT: Such concurrent modifying accesses (concerning the same variable) should be impossible as guaranteed by the
+	  Aeminium runtime
+	  => Scope maps can assume that concurrent method calls concern different variables
+	  => Concurrent data structures are sufficient to deal with this
+
+	  
+AbstractPlaidScopeMap:
+	- Make hash maps concurrent as they're used by LocalScopeMap and GlobalScopeMap
+
+
+PlaidLocalScopeMap:
+	- Concurrent hash sets/hash maps sufficient (see above)
+
+
+PlaidGlobalScopeMap:
+	- see PlaidLocalScopeMap
+	- static member globalScopes is independent from rest:
+		Make create() operation atomic so that concurrent create() calls for global scopes with the same name ("foo.bar")
+		don't create two equally named scopes. (Race: Both evaluate containsKey() to false and both create a new GlobalScope) 
+	- this.imports can actually change during runtime if an existing global scope is created with a different import list:
+		create("foo.bar", {x});
+		create("foo.bar", {x, y});
+		The second call modifies an existing GlobalScope's imports field.
+	- We iterate over this.imports, so we need to synchronize accesses and I chose to make the iteration atomic so this.imports
+	  doesn't change while iterating. (Note: Concurrent data structures can handle concurrent modifications while iterating
+	  but although it should be safe here because we're only adding elements to imports and never remove an entry, I think
+	  synchronized blocks are clearer in this situation) 
+
+
+PlaidClassLoaderMap:
+	- Reference to RuntimeMap is not needed anymore, removed it
+	- Made it a thread-safe singleton like comment suggested
+	- Synchronize accesses to "singletons" field to prevent various unwanted effects;
+	  a ConcurrentHashMap is not enough at this point I think:
+	  	For example we could end up loading the same class twice which definitely changes the current semantics.
+
+
+PlaidObjectMap (and subclasses):
+	- Doesn't need synchronization (handled by Aeminium!)

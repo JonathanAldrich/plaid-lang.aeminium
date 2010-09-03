@@ -90,7 +90,7 @@ public class DeclList implements State {
 		
 		out.assignToNewStateObject(y.getName());  //y = util.newObject();
 		Set<String> declNames = new HashSet<String>();
-		
+
 		for (Decl decl : decls) {
 			String name = decl.getName();
 			if (declNames.contains(name)) {
@@ -101,6 +101,7 @@ public class DeclList implements State {
 			}
 		}
 	}
+
 
 	@Override
 	public <T> void visitChildren(ASTVisitor<T> visitor) {

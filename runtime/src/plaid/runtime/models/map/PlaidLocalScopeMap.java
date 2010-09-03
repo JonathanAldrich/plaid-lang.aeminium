@@ -1,8 +1,9 @@
 package plaid.runtime.models.map;
 
 
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import plaid.runtime.PlaidObject;
 import plaid.runtime.PlaidRuntimeException;
@@ -23,9 +24,10 @@ public final class PlaidLocalScopeMap extends AbstractPlaidScopeMap {
 	public PlaidLocalScopeMap(PlaidScope parentScope) {
 		super();
 		this.parentScope = parentScope;
-		this.stateMembers = new HashSet<String>();
+		this.stateMembers = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 	}
 	
+	@Override
 	public PlaidObject lookup(String name) {
 		// Search in mutable scope map first so that (mutable) method parameters
 		// properly shadow (immutable) methods.
@@ -44,11 +46,11 @@ public final class PlaidLocalScopeMap extends AbstractPlaidScopeMap {
 			this.stateMembers.remove(name);
 		}
 		else if (this.immutableScopeMap.containsKey(name) || 
-				 this.mutableScopeMap.containsKey(name)) {
+				this.mutableScopeMap.containsKey(name)) {
 			throw new PlaidRuntimeException("Cannot insert '" + name + 
-					"': already defined in current scope.");
+			"': already defined in current scope.");
 		}
-		
+
 		if (immutable) {
 			this.immutableScopeMap.put(name, plaidObj);
 		}
@@ -57,10 +59,11 @@ public final class PlaidLocalScopeMap extends AbstractPlaidScopeMap {
 		}
 	}
 	
+	@Override
 	public void update(String name, PlaidObject plaidObj) {
 		if (this.immutableScopeMap.containsKey(name)) {
 			throw new PlaidRuntimeException("Cannot assign to variables " +
-					"declared with \"val\".");
+			"declared with \"val\".");
 		}
 		else if (this.mutableScopeMap.containsKey(name)) {
 			// if this is a state member, we have to update the actual state 
@@ -101,7 +104,7 @@ public final class PlaidLocalScopeMap extends AbstractPlaidScopeMap {
 		}
 		else {
 			throw new PlaidUnboundVariableException("Variable does not exist in " +
-					"current scope.");
+			"current scope.");
 		}
 		this.stateMembers.remove(name);
 	}
